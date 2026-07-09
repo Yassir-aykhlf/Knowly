@@ -1,0 +1,45 @@
+[project]
+name = "knowly-backend"
+version = "0.1.0"
+description = "Knowly backend: FastAPI + SQLAlchemy 2.0 + Alembic"
+
+authors = [
+    { name = "yassir aykhlf", email = "aykhlf15yassir@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.13,<2.0",
+    "anyio>=4.0,<5",
+    "asyncpg>=0.29,<0.31",
+    "bcrypt>=4.0,<4.1",
+    "email-validator>=2.1,<3.0",
+    "fastapi>=0.115,<0.116",
+    "greenlet>=3.0",
+    "httpx>=0.27,<0.28",
+    "passlib[bcrypt]>=1.7,<2.0",
+    "pillow>=10.3,<11",
+    "pydantic>=2.7,<3.0",
+    "pydantic-settings>=2.3,<3.0",
+    "python-magic>=0.4.27,<0.5",
+    "python-multipart>=0.0.9,<0.1",
+    "sqlalchemy[asyncio]>=2.0,<2.1",
+    "uvicorn[standard]>=0.30,<0.35",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx>=0.27,<0.28",
+    "pytest>=8.0,<9.0",
+    "pytest-asyncio>=0.23,<0.25",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
