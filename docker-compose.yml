@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: ${POSTGRES_USER} 
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
@@ -14,7 +14,7 @@ services:
       retries: 12
     networks:
       - knowly
-  
+
   backend:
     build:
       context: .
@@ -45,7 +45,7 @@ services:
       - frontend_dist:/output
     networks:
       - knowly
-  
+
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -63,7 +63,7 @@ services:
         condition: service_healthy
     networks:
       - knowly
-  
+
 volumes:
   postgres_data:
   uploads:
