@@ -10,6 +10,9 @@ node_modules/
 dist/
 build/
 
+generate_md.py
+git_log.txt
+commits_md
 empty/
 .env
 *.log
