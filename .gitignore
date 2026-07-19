@@ -12,6 +12,7 @@ build/
 
 generate_md.py
 git_log.txt
+CODEBASE.md
 commits_md
 empty/
 .env
