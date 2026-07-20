@@ -1,3 +1,15 @@
+"""Auth dependency — STUB (Launch Pad seam).
+
+Real opaque-session authentication is task **A-01**. Until that ships, this hands
+every request a hardcoded in-memory "dev user" so the frontend and the other
+lanes can be built without a working login. It completely ignores the session
+cookie.
+
+Why a stub and not the real thing? So Lane B/C/D can write protected endpoints
+(`Depends(get_current_user)`) on day one. When A-01 lands, replace the body of
+`get_optional_user` with a real cookie -> session -> user lookup; the signatures
+here are the final ones, so callers won't change.
+"""
 import uuid
 
 from fastapi import Depends, HTTPException, Request
