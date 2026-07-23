@@ -13,6 +13,7 @@ from app.services.mentions import extract_mentions
 
 IDEMPOTENT_EVENTS = frozenset({"answer_created", "comment_created", "mentioned"})
 
+
 async def create_notification(
     db: AsyncSession,
     *,
@@ -59,6 +60,7 @@ async def create_notification(
         subject_type=subject_type, subject_id=subject_id, link=link,
         coalesce_key=coalesce_key,
     ))
+
 async def emit_content_approved(
     db: AsyncSession, *, kind: str, obj, question_id: uuid.UUID, parent_author_id=None
 ) -> None:
@@ -101,12 +103,12 @@ async def notify_vote_if_new(
                                link=f"/questions/{question_id}", coalesce_key=f"vote:{target_type}:{target_id}")
 
 
-async def notify_content_edited(db, *, kind, obj, question_id, question_author_id, actor_id) -> None:
+async def notify_content_edited(
+        db: AsyncSession, *, kind: str, obj, question_id, question_author_id, actor_id
+) -> None:
     grace = timedelta(seconds=settings.EDIT_NOTIFICATION_GRACE_SECONDS)
     if datetime.utcnow() - obj.created_at <= grace:
         return
     await create_notification(db, recipient_id=question_author_id, actor_id=actor_id,
                                 event_type="content_edited", subject_type=kind, subject_id=obj.id,
                                 link=f"/questions/{question_id}")
-    
-    
