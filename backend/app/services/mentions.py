@@ -1,2 +1,17 @@
+import re
+
+_FENCED_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
+_UNCLOSED_FENCE_RE = re.compile(r"```.*", re.DOTALL)
+_INLINE_CODE_RE = re.compile(r"`[^`]*`")
+_MENTION_RE = re.compile(r"(?<![\w.@])@([A-Za-z0-9_-]{3,30})(?![A-Za-z0-9_-])")
+
+
 def extract_mentions(body: str) -> set[str]:
-    return set()
+    text = _FENCED_BLOCK_RE.sub(" ", body)
+    text = _UNCLOSED_FENCE_RE.sub(" ", text)
+    text = _INLINE_CODE_RE.sub(" ", text)
+    return {m.group(1) for m in _MENTION_RE.finditer(text)}
+
+
+# if __name__ == "__main__":
+#     print(extract_mentions("hey @alice and @bob here"))
