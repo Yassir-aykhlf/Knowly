@@ -9,6 +9,11 @@ Why a stub and not the real thing? So Lane B/C/D can write protected endpoints
 (`Depends(get_current_user)`) on day one. When A-01 lands, replace the body of
 `get_optional_user` with a real cookie -> session -> user lookup; the signatures
 here are the final ones, so callers won't change.
+"""Authentication dependencies.
+
+- `get_optional_user` — anonymous-friendly (returns None when signed out).
+- `get_current_user`  — hard wall (401 when signed out).
+- `require_admin`     — admin-only wall (403 for regular users).
 """
 import uuid
 
