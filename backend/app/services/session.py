@@ -31,7 +31,7 @@ async def create_session(db: AsyncSession, user_id) -> tuple[str, Session]:
 async def get_session(
     db: AsyncSession, raw_token: str | None
 ) -> Session | None:
-    if raw_token is None:
+    if not raw_token:
         return None
 
     token_hash = Session.hash_token(raw_token)
