@@ -1,6 +1,3 @@
-# from fastapi import APIRouter
-
-# router = APIRouter(prefix="/users", tags=["users"])
 
 from fastapi import APIRouter, Depends
 
