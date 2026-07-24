@@ -15,8 +15,6 @@ here are the final ones, so callers won't change.
 - `get_current_user`  — hard wall (401 when signed out).
 - `require_admin`     — admin-only wall (403 for regular users).
 """
-import uuid
-
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
