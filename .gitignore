@@ -25,3 +25,5 @@ certs/
 .idea/
 *.swp
 .DS_Store
+
+docker-compose.override.yml
