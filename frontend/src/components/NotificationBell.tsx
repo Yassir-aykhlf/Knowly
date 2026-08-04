@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { usePolling } from '../hooks/usePolling'
 import { api } from '../lib/api'
@@ -11,39 +11,43 @@ import Avatar from './Avatar'
 export default function NotificationBell() {
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<AppNotification[]>([])
-  const [loading, setLoading] = useState(false)
+  const [notifications, setNotifications] = useState<AppNotification[] | null>(null)
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const requestRef = useRef(0)
 
   const navigate = useNavigate()
 
-  async function fetchUnreadCount() {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const data = await api.get<UnreadCount>('/notifications/unread-count')
       setCount(data.count)
     } catch {
     }
-  }
+  }, [])
 
   useEffect(() => {
     void fetchUnreadCount()
-  }, [])
+  }, [fetchUnreadCount])
 
   usePolling(fetchUnreadCount, 30000)
 
 
   async function fetchNotifications() {
-    setLoading(true)
+    const requestId = ++requestRef.current
+
+    setNotifications(null)
 
     try {
       const data = await api.get<Paginated<AppNotification>>('/notifications?limit=10')
-      setNotifications(data.items)
+      if (requestRef.current === requestId) {
+        setNotifications(data.items)
+      }
     } catch {
-      setNotifications([])
-    } finally {
-      setLoading(false)
+      if (requestRef.current === requestId) {
+        setNotifications([])
+      }
     }
   }
 
@@ -93,39 +97,50 @@ export default function NotificationBell() {
   async function openNotification(notification: AppNotification) {
     setOpen(false)
 
-    try {
-      await api.put(`/notifications/${notification.id}/read`)
-    } catch {
-    }
+    if (notification.read_at === null) {
+      try {
+        await api.put(`/notifications/${notification.id}/read`)
+      } catch {
+      }
 
-    void fetchUnreadCount()
+      void fetchUnreadCount()
+    }
 
     navigate(notification.link)
   }
 
 
   async function markAllRead() {
-    setCount(0)
-
-    setNotifications(previous =>
-      previous.map(notification => ({
-        ...notification,
-        read_at: notification.read_at ?? new Date().toISOString(),
-      }))
-    )
-
     try {
       await api.put('/notifications/read-all')
     } catch {
-      void fetchUnreadCount()
+      return
     }
+
+    setCount(0)
+
+    setNotifications(previous =>
+      previous
+        ? previous.map(notification => ({
+            ...notification,
+            read_at: notification.read_at ?? new Date().toISOString(),
+          }))
+        : previous
+    )
   }
 
 
   return (
     <div ref={dropdownRef} className="relative">
 
-      <button ref={buttonRef} type="button" aria-label="Notifications" aria-expanded={open} onClick={toggleDropdown} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={count > 0 ? `Notifications (${count} unread)` : 'Notifications'}
+        aria-expanded={open}
+        onClick={toggleDropdown}
+        className="relative"
+      >
         🔔
 
         {count > 0 && (
@@ -137,53 +152,64 @@ export default function NotificationBell() {
 
 
       {open && (
-        <div role="menu" className="absolute right-0 z-50 mt-2 w-80 rounded-lg border bg-white shadow-lg">
+        <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border bg-white shadow-lg">
 
           <div className="flex justify-between border-b p-3">
             <span>Notifications</span>
 
-            <button type="button" onClick={markAllRead}>
+            <button type="button" onClick={() => void markAllRead()}>
               Mark all read
             </button>
           </div>
 
 
-          {loading && (
+          {notifications === null && (
             <p className="p-3">
               Loading...
             </p>
           )}
 
 
-          {!loading && notifications.length === 0 && (
+          {notifications !== null && notifications.length === 0 && (
             <p className="p-3">
-              You're all caught up.
+              You&rsquo;re all caught up.
             </p>
           )}
 
 
-          {notifications.map(notification => (
-            <button
-              key={notification.id}
-              type="button"
-              onClick={() => openNotification(notification)}
-              className={`flex w-full gap-3 p-3 text-left ${notification.read_at ? '' : 'bg-gray-100'}`}
-            >
+          {notifications !== null && notifications.length > 0 && (
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.map(notification => (
+                <button
+                  key={notification.id}
+                  type="button"
+                  onClick={() => void openNotification(notification)}
+                  className={`flex w-full gap-3 p-3 text-left ${notification.read_at ? '' : 'bg-gray-100'}`}
+                >
 
-              <Avatar user={notification.actor ?? { username: 'Someone', avatar_url: null }} size={32} />
+                  <Avatar user={notification.actor ?? { username: 'Someone', avatar_url: null }} size={32} />
 
-              <div>
-                <p>
-                  {describeNotification(notification)}
-                </p>
+                  <div>
+                    <p>
+                      {describeNotification(notification)}
+                    </p>
 
-                <span>
-                  {relativeTime(notification.created_at)}
-                </span>
-              </div>
+                    <span>
+                      {relativeTime(notification.created_at)}
+                    </span>
+                  </div>
 
-            </button>
-          ))}
+                </button>
+              ))}
+            </div>
+          )}
+
+
+          <div className="border-t p-3 text-center">
+            <Link to="/notifications" onClick={() => setOpen(false)}>
+              See all
+            </Link>
+          </div>
 
         </div>
       )}

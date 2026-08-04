@@ -14,7 +14,7 @@ export function describeNotification(notification: AppNotification): string {
     case 'vote_cast':
       if (notification.actor_count > 1) {
         const others = notification.actor_count - 1
-        return `${who} and ${others} others voted on your ${subject}`
+        return `${who} and ${others} other${others > 1 ? 's' : ''} voted on your ${subject}`
       }
 
       return `${who} voted on your ${subject}`
@@ -47,6 +47,6 @@ export function describeNotification(notification: AppNotification): string {
       return `Your ${subject} was rejected by a moderator`
 
     default:
-      return `${who} triggered a notification`
+      return `${who}: ${notification.event_type.replace(/_/g, ' ')}`
   }
 }
