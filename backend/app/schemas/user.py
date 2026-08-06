@@ -1,7 +1,9 @@
 from datetime import datetime
 import uuid
 
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import User
 
@@ -46,3 +48,31 @@ class UserMeOut(BaseModel):
             is_anonymized=user.is_anonymized,
             has_password=user.password_hash is not None,
         )
+
+
+class RegisterIn(BaseModel):
+    email: EmailStr
+
+    username: str = Field(
+        min_length=3,
+        max_length=30,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    )
+
+    password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+
+    @field_validator("password")
+    @classmethod
+    def _letter_and_digit(cls, v: str) -> str:
+        has_letter = re.search(r"[A-Za-z]", v)
+        has_digit = re.search(r"\d", v)
+
+        if not has_letter or not has_digit:
+            raise ValueError(
+                "Password must contain at least one letter and one digit"
+            )
+
+        return v

@@ -12,9 +12,10 @@ RUN apt-get update \
 
 COPY backend/pyproject.toml ./
 COPY backend/app ./app
+COPY backend/tests ./tests
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
-RUN pip install .
+RUN pip install ".[test]"
 
 COPY scripts/check-env.sh ./scripts/check-env.sh
 COPY backend/entrypoint.sh /usr/local/bin/entrypoint.sh
