@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.routers import auth, health, users
+from app.routers import health, notifications, users
 from app.schemas.common import error_body
 
 
@@ -87,3 +88,4 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
