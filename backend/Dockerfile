@@ -14,7 +14,8 @@ COPY backend/pyproject.toml ./
 COPY backend/app ./app
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
-RUN pip install .
+COPY backend/tests ./tests
+RUN pip install '.[test]'
 
 COPY scripts/check-env.sh ./scripts/check-env.sh
 COPY backend/entrypoint.sh /usr/local/bin/entrypoint.sh
