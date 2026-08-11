@@ -9,3 +9,6 @@ def hash_password(plain: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return _pwd_context.verify(plain, hashed)
+
+
+DUMMY_PASSWORD_HASH = hash_password("knowly-dummy-login-password")
