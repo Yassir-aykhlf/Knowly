@@ -56,7 +56,6 @@ async def send_friend_request(
                 detail={"code": "conflict", "message": "A friend request already exists"},
             )
 
-        # existing.status == "rejected" -> re-request
         cooldown_hours = settings.FRIEND_REREQUEST_COOLDOWN_HOURS
         if cooldown_hours > 0:
             elapsed = datetime.utcnow() - existing.updated_at
@@ -88,11 +87,8 @@ async def send_friend_request(
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        # Lost the race for the unordered-pair unique index: fall through to
-        # the "row already exists" logic using the row that won.
         existing = await _find_pair(db, caller_id, addressee_id)
         if existing is None:
-            # Extremely unlikely, but don't loop forever.
             raise HTTPException(
                 status_code=409,
                 detail={"code": "conflict", "message": "A friend request already exists"},
@@ -114,3 +110,89 @@ async def send_friend_request(
     await db.commit()
     await db.refresh(friendship)
     return friendship
+
+
+async def _get_friendship_or_404(db: AsyncSession, friendship_id: uuid.UUID) -> Friendship:
+    friendship = await db.get(Friendship, friendship_id)
+    if friendship is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Friendship not found"},
+        )
+    return friendship
+
+
+async def _respond_to_request(
+    db: AsyncSession,
+    friendship_id: uuid.UUID,
+    caller_id: uuid.UUID,
+    new_status: str,
+) -> Friendship:
+    friendship = await _get_friendship_or_404(db, friendship_id)
+
+    if caller_id != friendship.addressee_id:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "forbidden", "message": "Only the addressee can respond to this request"},
+        )
+
+    if friendship.status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "conflict", "message": "This request is no longer pending"},
+        )
+
+    friendship.status = new_status
+
+    if new_status == "accepted":
+        await create_notification(
+            db,
+            recipient_id=friendship.requester_id,
+            actor_id=caller_id,
+            event_type="friend_accepted",
+            link=f"/users/{caller_id}",
+        )
+
+    await db.commit()
+    await db.refresh(friendship)
+    return friendship
+
+
+async def accept_friend_request(
+    db: AsyncSession, friendship_id: uuid.UUID, caller_id: uuid.UUID
+) -> Friendship:
+    return await _respond_to_request(db, friendship_id, caller_id, "accepted")
+
+
+async def reject_friend_request(
+    db: AsyncSession, friendship_id: uuid.UUID, caller_id: uuid.UUID
+) -> Friendship:
+    return await _respond_to_request(db, friendship_id, caller_id, "rejected")
+
+
+async def remove_friendship(
+    db: AsyncSession, friendship_id: uuid.UUID, caller_id: uuid.UUID
+) -> None:
+    friendship = await _get_friendship_or_404(db, friendship_id)
+
+    if caller_id not in (friendship.requester_id, friendship.addressee_id):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "forbidden", "message": "You are not part of this friendship"},
+        )
+
+    other_id = (
+        friendship.addressee_id
+        if caller_id == friendship.requester_id
+        else friendship.requester_id
+    )
+
+    await create_notification(
+        db,
+        recipient_id=other_id,
+        actor_id=caller_id,
+        event_type="friend_removed",
+        link=f"/users/{caller_id}",
+    )
+    await db.delete(friendship)
+    await db.commit()
