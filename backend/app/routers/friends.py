@@ -5,16 +5,39 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.friend import FriendRequestCreate, FriendRequestOut
+from app.schemas.friend import (
+    FriendOut,
+    FriendRequestCreate,
+    FriendRequestOut,
+    PendingRequestOut,
+)
 from app.services.auth import get_current_user
 from app.services.friends import (
     accept_friend_request,
+    list_friends,
+    list_pending_requests,
     reject_friend_request,
     remove_friendship,
     send_friend_request,
 )
 
 router = APIRouter(prefix="/friends", tags=["friends"])
+
+
+@router.get("", response_model=list[FriendOut])
+async def get_friends(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    return await list_friends(db, user.id)
+
+
+@router.get("/pending", response_model=list[PendingRequestOut])
+async def get_pending_requests(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    return await list_pending_requests(db, user.id)
 
 
 @router.post("/request", response_model=FriendRequestOut, status_code=201)
