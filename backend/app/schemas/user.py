@@ -49,6 +49,45 @@ class UserMeOut(BaseModel):
             has_password=user.password_hash is not None,
         )
 
+class FriendshipOut(BaseModel):
+    state: str
+    id: uuid.UUID | None
+
+
+class UserProfileOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    bio: str | None
+    avatar_url: str | None
+    created_at: datetime
+    question_count: int
+    answer_count: int
+    accepted_answer_count: int
+    is_anonymized: bool
+    friendship: FriendshipOut | None
+
+    @classmethod
+    def from_user(
+        cls,
+        user: User,
+        question_count: int,
+        answer_count: int,
+        accepted_answer_count: int,
+        friendship: FriendshipOut | None,
+    ) -> "UserProfileOut":
+        return cls(
+            id=user.id,
+            username=user.username,
+            bio=None if user.is_anonymized else user.bio,
+            avatar_url=None if user.is_anonymized else user.avatar_path,
+            created_at=user.created_at,
+            question_count=question_count,
+            answer_count=answer_count,
+            accepted_answer_count=accepted_answer_count,
+            is_anonymized=user.is_anonymized,
+            friendship=friendship,
+        )
+
 
 class RegisterIn(BaseModel):
     email: EmailStr
