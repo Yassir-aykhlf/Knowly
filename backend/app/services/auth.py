@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.models.session import Session
 from app.models.user import User
 
 from app.services.session import (
@@ -41,6 +42,39 @@ async def get_current_user(
 
     return user
 
+async def get_current_user_and_session(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> tuple[User, Session]:
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+
+    session = await get_session(db, raw_token)
+
+    if session is None:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "unauthenticated",
+                "message": "Authentication required",
+            },
+        )
+
+    result = await db.execute(
+        select(User).where(User.id == session.user_id)
+    )
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "unauthenticated",
+                "message": "Authentication required",
+            },
+        )
+
+    return user, session
 
 async def require_admin(
     user: User = Depends(get_current_user),
