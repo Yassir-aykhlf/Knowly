@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 def visible_filter(model, user):
+    # STUB: swap for B-01
     return model.moderation_status == "approved"
-
 
 def can_view(content, user) -> bool:
     return True

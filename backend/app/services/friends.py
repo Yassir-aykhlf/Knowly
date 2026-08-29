@@ -15,8 +15,8 @@ from app.services.notifications import create_notification
 async def friendship_state_for(
     db: AsyncSession, caller, other_id: uuid.UUID
 ) -> tuple[str, uuid.UUID | None]:
+    # STUB: swap for C-07
     return "none", None
-
 
 async def _find_pair(
     db: AsyncSession, a: uuid.UUID, b: uuid.UUID
