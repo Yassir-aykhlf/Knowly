@@ -76,3 +76,24 @@ class RegisterIn(BaseModel):
             )
 
         return v
+    
+class PasswordChangeIn(BaseModel):
+    current_password: str
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def _letter_and_digit(cls, v: str) -> str:
+        has_letter = re.search(r"[A-Za-z]", v)
+        has_digit = re.search(r"\d", v)
+
+        if not has_letter or not has_digit:
+            raise ValueError(
+                "Password must contain at least one letter and one digit"
+            )
+
+        return v
