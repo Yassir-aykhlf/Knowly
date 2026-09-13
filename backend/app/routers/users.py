@@ -1,7 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -38,6 +40,26 @@ async def get_me(
     user: User = Depends(get_current_user),
 ) -> UserMeOut:
     return UserMeOut.from_user(user)
+@router.post("/me/heartbeat", status_code=204)
+async def heartbeat(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    now = datetime.utcnow()
+    cutoff = now - timedelta(seconds=30)
+
+    await db.execute(
+        update(User)
+        .where(
+            User.id == user.id,
+            User.last_seen < cutoff,
+        )
+        .values(last_seen=now)
+    )
+
+    await db.commit()
+
+    return Response(status_code=204)
 
 @router.get("/{user_id}", response_model=UserProfileOut)
 async def get_public_profile(
@@ -233,9 +255,7 @@ async def get_profile_answers(
     answer_ids = [answer.id for answer in answers]
     question_ids = list({answer.question_id for answer in answers})
 
-    # Parent questions are independently visibility-filtered. If a parent is
-    # hidden (or absent), it is deliberately omitted from this map so no title
-    # or accepted-answer state can leak through the answer listing.
+    
     visible_questions: dict[uuid.UUID, Question] = {}
     if question_ids:
         parent_rows = await db.execute(
