@@ -89,6 +89,42 @@ class UserProfileOut(BaseModel):
         )
 
 
+class ProfileQuestionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    excerpt: str
+    tags: list[str]
+    author: AuthorOut
+    vote_total: int
+    answer_count: int
+    view_count: int
+    has_accepted_answer: bool
+    created_at: datetime
+
+
+class ProfileQuestionPage(BaseModel):
+    items: list[ProfileQuestionOut]
+    total: int
+    page: int
+    limit: int
+
+
+class ProfileAnswerOut(BaseModel):
+    id: uuid.UUID
+    question_id: uuid.UUID
+    question_title: str
+    excerpt: str
+    vote_total: int
+    is_accepted: bool
+    created_at: datetime
+
+
+class ProfileAnswerPage(BaseModel):
+    items: list[ProfileAnswerOut]
+    total: int
+    page: int
+    limit: int
+
 class RegisterIn(BaseModel):
     email: EmailStr
 

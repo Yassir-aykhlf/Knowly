@@ -1,14 +1,30 @@
 import uuid
 from types import SimpleNamespace
 
+from sqlalchemy import or_, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 def visible_filter(model, user):
-    # STUB: swap for B-01
-    return model.moderation_status == "approved"
+    """SQL visibility rule shared by questions, answers, and profile counts.
+
+    Approved content is public. Authors can see their own held content, and
+    admins can see held content regardless of author.
+    """
+    if user is None:
+        return model.moderation_status == "approved"
+    if user.role == "admin":
+        return true()
+    return or_(
+        model.moderation_status == "approved",
+        model.author_id == user.id,
+    )
 
 def can_view(content, user) -> bool:
-    return True
+    if content.moderation_status == "approved":
+        return True
+    if user is None:
+        return False
+    return user.role == "admin" or content.author_id == user.id
 
 
 async def load_owned(db: AsyncSession, model, obj_id: uuid.UUID, user, kind: str):
