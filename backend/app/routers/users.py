@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -21,6 +22,7 @@ from app.schemas.user import (
     ProfileQuestionPage,
     UserMeOut,
     UserProfileOut,
+    UserProfileUpdateIn,
 )
 from app.services.auth import (
     get_current_user,
@@ -38,6 +40,65 @@ async def get_me(
     user: User = Depends(get_current_user),
 ) -> UserMeOut:
     return UserMeOut.from_user(user)
+
+
+@router.put("/me", response_model=UserMeOut)
+async def update_me(
+    payload: UserProfileUpdateIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserMeOut:
+    changes = payload.model_dump(exclude_unset=True)
+
+    if "username" in changes:
+        new_username = changes["username"]
+
+        if new_username != user.username:
+            result = await db.execute(
+                select(User.id).where(User.username == new_username)
+            )
+
+            if result.scalar_one_or_none() is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "conflict",
+                        "message": "Username already taken",
+                        "fields": {
+                            "username": "Username already taken",
+                        },
+                    },
+                )
+
+            user.username = new_username
+
+    if "bio" in changes:
+        user.bio = changes["bio"]
+
+    try:
+        await db.commit()
+
+    except IntegrityError as exc:
+        await db.rollback()
+
+        if getattr(exc.orig, "sqlstate", None) == "23505":
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "conflict",
+                    "message": "Username already taken",
+                    "fields": {
+                        "username": "Username already taken",
+                    },
+                },
+            ) from exc
+
+        raise
+
+    await db.refresh(user)
+
+    return UserMeOut.from_user(user)
+
 
 @router.get("/{user_id}", response_model=UserProfileOut)
 async def get_public_profile(

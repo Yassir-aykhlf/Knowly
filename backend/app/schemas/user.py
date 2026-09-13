@@ -151,7 +151,37 @@ class RegisterIn(BaseModel):
             )
 
         return v
-    
+
+   
+class UserProfileUpdateIn(BaseModel):
+    username: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=30,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    )
+    bio: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def _username_must_not_be_null(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("Username cannot be null")
+        return value
+
+    @field_validator("bio", mode="before")
+    @classmethod
+    def _normalize_bio(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = value.strip()
+
+        if len(value) > 500:
+            raise ValueError("Bio must be 500 characters or fewer")
+
+        return value or None
+
 class PasswordChangeIn(BaseModel):
     current_password: str
 
