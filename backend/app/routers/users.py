@@ -1,9 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.db.session import get_db
 from app.models.answer import Answer
 from app.models.question import Question
@@ -27,17 +28,81 @@ from app.services.auth import (
     get_current_user_and_session,
     get_optional_user,
 )
+from app.services.avatar import (
+    delete_avatar_file,
+    normalize_and_store_avatar,
+)
 from app.services.content import visible_filter
 from app.services.friends import friendship_state_for
 from app.services.security import hash_password, verify_password
 from app.services.session import delete_other_sessions
+
+
 router = APIRouter(prefix="/users", tags=["users"])
+
 
 @router.get("/me", response_model=UserMeOut)
 async def get_me(
     user: User = Depends(get_current_user),
 ) -> UserMeOut:
     return UserMeOut.from_user(user)
+
+
+@router.post("/me/avatar", response_model=UserMeOut)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserMeOut:
+    raw = await file.read(settings.AVATAR_MAX_BYTES + 1)
+
+    if len(raw) > settings.AVATAR_MAX_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "validation_error",
+                "message": "Invalid avatar",
+                "fields": {
+                    "avatar": "Avatar must be 2 MB or smaller",
+                },
+            },
+        )
+
+    new_path = normalize_and_store_avatar(raw)
+    old_path = user.avatar_path
+
+    user.avatar_path = new_path
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        delete_avatar_file(new_path)
+        raise
+
+    await db.refresh(user)
+
+    delete_avatar_file(old_path)
+
+    return UserMeOut.from_user(user)
+
+
+@router.delete("/me/avatar", response_model=UserMeOut)
+async def delete_avatar(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserMeOut:
+    old_path = user.avatar_path
+
+    user.avatar_path = None
+
+    await db.commit()
+    await db.refresh(user)
+
+    delete_avatar_file(old_path)
+
+    return UserMeOut.from_user(user)
+
 
 @router.get("/{user_id}", response_model=UserProfileOut)
 async def get_public_profile(
@@ -120,13 +185,18 @@ async def get_profile_questions(
     db: AsyncSession = Depends(get_db),
 ) -> ProfileQuestionPage:
     user = await db.get(User, user_id)
+
     if user is None:
         raise HTTPException(
             status_code=404,
-            detail={"code": "not_found", "message": "User not found"},
+            detail={
+                "code": "not_found",
+                "message": "User not found",
+            },
         )
 
     visibility = visible_filter(Question, viewer)
+
     total = (
         await db.execute(
             select(func.count(Question.id)).where(
@@ -140,41 +210,64 @@ async def get_profile_questions(
         (
             await db.execute(
                 select(Question)
-                .where(Question.author_id == user.id, visibility)
-                .order_by(Question.created_at.desc(), Question.id.desc())
+                .where(
+                    Question.author_id == user.id,
+                    visibility,
+                )
+                .order_by(
+                    Question.created_at.desc(),
+                    Question.id.desc(),
+                )
                 .offset((page - 1) * limit)
                 .limit(limit)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
+
     question_ids = [question.id for question in questions]
 
     vote_totals: dict[uuid.UUID, int] = {}
     answer_counts: dict[uuid.UUID, int] = {}
+
     if question_ids:
         vote_rows = await db.execute(
-            select(Vote.target_id, func.coalesce(func.sum(Vote.value), 0))
+            select(
+                Vote.target_id,
+                func.coalesce(func.sum(Vote.value), 0),
+            )
             .where(
                 Vote.target_type == "question",
                 Vote.target_id.in_(question_ids),
             )
             .group_by(Vote.target_id)
         )
-        vote_totals = {target_id: int(total) for target_id, total in vote_rows.all()}
+
+        vote_totals = {
+            target_id: int(total)
+            for target_id, total in vote_rows.all()
+        }
 
         count_rows = await db.execute(
-            select(Answer.question_id, func.count(Answer.id))
+            select(
+                Answer.question_id,
+                func.count(Answer.id),
+            )
             .where(
                 Answer.question_id.in_(question_ids),
                 Answer.moderation_status == "approved",
             )
             .group_by(Answer.question_id)
         )
+
         answer_counts = {
-            question_id: int(count) for question_id, count in count_rows.all()
+            question_id: int(count)
+            for question_id, count in count_rows.all()
         }
 
     author = AuthorOut.from_user(user)
+
     items = [
         ProfileQuestionOut(
             id=question.id,
@@ -191,7 +284,12 @@ async def get_profile_questions(
         for question in questions
     ]
 
-    return ProfileQuestionPage(items=items, total=total, page=page, limit=limit)
+    return ProfileQuestionPage(
+        items=items,
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/{user_id}/answers", response_model=ProfileAnswerPage)
@@ -203,13 +301,18 @@ async def get_profile_answers(
     db: AsyncSession = Depends(get_db),
 ) -> ProfileAnswerPage:
     user = await db.get(User, user_id)
+
     if user is None:
         raise HTTPException(
             status_code=404,
-            detail={"code": "not_found", "message": "User not found"},
+            detail={
+                "code": "not_found",
+                "message": "User not found",
+            },
         )
 
     answer_visibility = visible_filter(Answer, viewer)
+
     total = (
         await db.execute(
             select(func.count(Answer.id)).where(
@@ -223,20 +326,27 @@ async def get_profile_answers(
         (
             await db.execute(
                 select(Answer)
-                .where(Answer.author_id == user.id, answer_visibility)
-                .order_by(Answer.created_at.desc(), Answer.id.desc())
+                .where(
+                    Answer.author_id == user.id,
+                    answer_visibility,
+                )
+                .order_by(
+                    Answer.created_at.desc(),
+                    Answer.id.desc(),
+                )
                 .offset((page - 1) * limit)
                 .limit(limit)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
+
     answer_ids = [answer.id for answer in answers]
     question_ids = list({answer.question_id for answer in answers})
 
-    # Parent questions are independently visibility-filtered. If a parent is
-    # hidden (or absent), it is deliberately omitted from this map so no title
-    # or accepted-answer state can leak through the answer listing.
     visible_questions: dict[uuid.UUID, Question] = {}
+
     if question_ids:
         parent_rows = await db.execute(
             select(Question).where(
@@ -244,42 +354,63 @@ async def get_profile_answers(
                 visible_filter(Question, viewer),
             )
         )
+
         visible_questions = {
-            question.id: question for question in parent_rows.scalars().all()
+            question.id: question
+            for question in parent_rows.scalars().all()
         }
 
     vote_totals: dict[uuid.UUID, int] = {}
+
     if answer_ids:
         vote_rows = await db.execute(
-            select(Vote.target_id, func.coalesce(func.sum(Vote.value), 0))
+            select(
+                Vote.target_id,
+                func.coalesce(func.sum(Vote.value), 0),
+            )
             .where(
                 Vote.target_type == "answer",
                 Vote.target_id.in_(answer_ids),
             )
             .group_by(Vote.target_id)
         )
-        vote_totals = {target_id: int(total) for target_id, total in vote_rows.all()}
+
+        vote_totals = {
+            target_id: int(total)
+            for target_id, total in vote_rows.all()
+        }
 
     items: list[ProfileAnswerOut] = []
+
     for answer in answers:
         parent = visible_questions.get(answer.question_id)
+
         items.append(
             ProfileAnswerOut(
                 id=answer.id,
                 question_id=answer.question_id,
                 question_title=(
-                    parent.title if parent is not None else "(removed question)"
+                    parent.title
+                    if parent is not None
+                    else "(removed question)"
                 ),
                 excerpt=excerpt(answer.body),
                 vote_total=vote_totals.get(answer.id, 0),
                 is_accepted=(
-                    parent is not None and parent.accepted_answer_id == answer.id
+                    parent is not None
+                    and parent.accepted_answer_id == answer.id
                 ),
                 created_at=answer.created_at,
             )
         )
 
-    return ProfileAnswerPage(items=items, total=total, page=page, limit=limit)
+    return ProfileAnswerPage(
+        items=items,
+        total=total,
+        page=page,
+        limit=limit,
+    )
+
 
 @router.put("/me/password", status_code=204)
 async def change_password(
@@ -293,7 +424,10 @@ async def change_password(
 
     if (
         user.password_hash is None
-        or not verify_password(payload.current_password, user.password_hash)
+        or not verify_password(
+            payload.current_password,
+            user.password_hash,
+        )
     ):
         raise HTTPException(
             status_code=401,
