@@ -49,6 +49,81 @@ class UserMeOut(BaseModel):
             has_password=user.password_hash is not None,
         )
 
+class FriendshipOut(BaseModel):
+    state: str
+    id: uuid.UUID | None
+
+
+class UserProfileOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    bio: str | None
+    avatar_url: str | None
+    created_at: datetime
+    question_count: int
+    answer_count: int
+    accepted_answer_count: int
+    is_anonymized: bool
+    friendship: FriendshipOut | None
+
+    @classmethod
+    def from_user(
+        cls,
+        user: User,
+        question_count: int,
+        answer_count: int,
+        accepted_answer_count: int,
+        friendship: FriendshipOut | None,
+    ) -> "UserProfileOut":
+        return cls(
+            id=user.id,
+            username=user.username,
+            bio=None if user.is_anonymized else user.bio,
+            avatar_url=None if user.is_anonymized else user.avatar_path,
+            created_at=user.created_at,
+            question_count=question_count,
+            answer_count=answer_count,
+            accepted_answer_count=accepted_answer_count,
+            is_anonymized=user.is_anonymized,
+            friendship=friendship,
+        )
+
+
+class ProfileQuestionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    excerpt: str
+    tags: list[str]
+    author: AuthorOut
+    vote_total: int
+    answer_count: int
+    view_count: int
+    has_accepted_answer: bool
+    created_at: datetime
+
+
+class ProfileQuestionPage(BaseModel):
+    items: list[ProfileQuestionOut]
+    total: int
+    page: int
+    limit: int
+
+
+class ProfileAnswerOut(BaseModel):
+    id: uuid.UUID
+    question_id: uuid.UUID
+    question_title: str
+    excerpt: str
+    vote_total: int
+    is_accepted: bool
+    created_at: datetime
+
+
+class ProfileAnswerPage(BaseModel):
+    items: list[ProfileAnswerOut]
+    total: int
+    page: int
+    limit: int
 
 class RegisterIn(BaseModel):
     email: EmailStr
@@ -65,6 +140,27 @@ class RegisterIn(BaseModel):
     )
 
     @field_validator("password")
+    @classmethod
+    def _letter_and_digit(cls, v: str) -> str:
+        has_letter = re.search(r"[A-Za-z]", v)
+        has_digit = re.search(r"\d", v)
+
+        if not has_letter or not has_digit:
+            raise ValueError(
+                "Password must contain at least one letter and one digit"
+            )
+
+        return v
+    
+class PasswordChangeIn(BaseModel):
+    current_password: str
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+
+    @field_validator("new_password")
     @classmethod
     def _letter_and_digit(cls, v: str) -> str:
         has_letter = re.search(r"[A-Za-z]", v)
