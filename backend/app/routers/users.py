@@ -2,7 +2,7 @@ import uuid
 
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
