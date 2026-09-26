@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -10,11 +10,13 @@ from app.db.session import get_db
 from app.models.user import User
 from app.models.session import Session
 
-from app.schemas.user import RegisterIn 
+from app.schemas.auth import RegisterIn
+from app.schemas.auth import LoginIn
 from app.config import settings
 
-from app.services.security import hash_password
-from app.services.session import create_session
+from app.services.security import hash_password, verify_password, DUMMY_PASSWORD_HASH
+
+from app.services.session import create_session, delete_session
 
 from app.services.session import SESSION_COOKIE_NAME 
 
@@ -109,4 +111,59 @@ async def register_user(
     return user, raw_token
 
 
+async def login_user(
+    db: AsyncSession,
+    data: LoginIn,
+) -> tuple[User, str]:
 
+    stmt = select(User).where(User.email == data.email)
+
+    result = await db.execute(stmt)
+
+    user = result.scalar_one_or_none()
+
+    if user is not None and user.password_hash is not None:
+        password_hash = user.password_hash
+    else:
+        password_hash = DUMMY_PASSWORD_HASH
+
+    password_ok = verify_password(data.password, password_hash)
+
+    if (
+        user is None
+        or user.password_hash is None
+        or not password_ok
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "invalid_credentials",
+                "message": "Invalid email or password",
+                "fields": {
+                    "oauth_hint": "true"
+                },
+            },
+        )
+
+    raw_token = await create_session(db, user.id)
+
+    return user, raw_token
+
+async def logout_user(
+    db: AsyncSession,
+    raw_token: str | None,
+) -> None:
+    if raw_token is None:
+        return
+
+    token_hash = Session.hash_token(raw_token)
+
+    stmt = select(Session).where(
+        Session.token_hash == token_hash
+    )
+
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if session is not None:
+        await delete_session(db, session)
