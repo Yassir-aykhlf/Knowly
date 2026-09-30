@@ -1,18 +1,19 @@
 import uuid
-from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.moderation import screen_and_stage
+from app.services.files import bind_attachments
+
 from app.db.session import get_db
-from app.models.question import Question, QuestionCreateIn, QuestionOut
+from app.models.question import Question
+from app.schemas.question import QuestionCreateIn, QuestionOut
 from app.models.user import User
 from app.schemas.user import AuthorOut
 from app.services.auth import get_current_user
 
-router = APIRouter(tags=["questions"])
+router = APIRouter(prefix="/questions", tags=["questions"])
 
 
 def validate_question_payload(payload: QuestionCreateIn) -> QuestionCreateIn:
@@ -22,7 +23,8 @@ def validate_question_payload(payload: QuestionCreateIn) -> QuestionCreateIn:
     if not (10 <= len(clean_title) <= 200):
         errors["title"] = "Must be between 10 and 200 characters after trimming."
 
-    if not (30 <= len(payload.body) <= 30_000):
+    body_len = len(payload.body.strip())
+    if body_len < 30 or len(payload.body) > 30_000:
         errors["body"] = "Must be between 30 and 30,000 characters."
 
     clean_tags = [t.strip() for t in payload.tags if t.strip() != ""]
@@ -49,18 +51,7 @@ def validate_question_payload(payload: QuestionCreateIn) -> QuestionCreateIn:
     )
 
 
-async def screen_and_stage(db: AsyncSession, *, kind: str, obj: Any, text: str, **kw: Any) -> None:
-    obj.moderation_status = "approved"
-    obj.moderation_note = None
-    await db.flush()
-
-
-# STUB: swap for D-09
-async def bind_attachments(db: AsyncSession, *, attachment_ids: list[int], parent_type: str, parent_id: uuid.UUID, user: User) -> list[Any]:
-    return []
-
-
-@router.post("/questions", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
 async def create_question_endpoint(
     raw_payload: QuestionCreateIn,
     current_user: User = Depends(get_current_user),
@@ -79,7 +70,7 @@ async def create_question_endpoint(
     await db.flush()
 
     text_to_screen = f"{data.title}\n\n{data.body}"
-    await screen_and_stage(db=db, kind="question", obj=new_question, text=text_to_screen)
+    await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
 
     attachments = await bind_attachments(
         db=db,
