@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.routers import auth, friends, health, messages, notifications, users
+from app.routers import auth, friends, health, messages, notifications, users, questions
 from app.schemas.common import error_body
 
 
@@ -39,8 +39,10 @@ _STATUS_CODE_NAMES = {
     500: "internal_error",
 }
 
+
 def _code_for(status_code: int) -> str:
     return _STATUS_CODE_NAMES.get(status_code, "error")
+
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -62,6 +64,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         headers=getattr(exc, "headers", None)
     )
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     fields: dict[str, str] = {}
@@ -73,8 +76,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         fields[key] = err.get("msg", "invalid")
     return JSONResponse(
         status_code=400,
-        content=error_body("validation_error", "Request validation failed", fields)
+        content=error_body("validation_error",
+                           "Request validation failed", fields)
     )
+
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -90,3 +95,4 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(friends.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
+app.include_router(questions.router, prefix="/api")
