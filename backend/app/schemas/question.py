@@ -1,7 +1,12 @@
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
-from typing import Any
 import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.user import AuthorOut
+from app.models.answer import Answer
+from app.models.comment import Comment
+from app.models.attachment import Attachment
 
 
 class QuestionCreateIn(BaseModel):
@@ -18,7 +23,7 @@ class QuestionOut(BaseModel):
     title: str
     body: str
     tags: list[str]
-    author: Any
+    author: AuthorOut
     view_count: int
     vote_total: int = 0
     my_vote: int = 0
@@ -27,6 +32,7 @@ class QuestionOut(BaseModel):
     moderation_note: str | None = None
     created_at: datetime
     updated_at: datetime
-    answers: list[Any] = []
-    comments: list[Any] = []
-    attachments: list[Any] = []
+    answers: list[Answer] = Field(default_factory=list)
+    comments: list[Comment] = Field(default_factory=list)
+    attachments: list[Attachment] = Field(default_factory=list)
+    # attachments: list[AttachmentOut] = Field(default_factory=list)
