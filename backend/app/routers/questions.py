@@ -100,6 +100,7 @@ async def create_question_endpoint(
     text_to_screen = f"{data.title}\n\n{data.body}"
     await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
 
+    # STUB: swap for D-09
     attachments = await bind_attachments(
         db=db,
         attachment_ids=data.attachment_ids,
