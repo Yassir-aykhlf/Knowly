@@ -89,6 +89,7 @@ class Question(Base):
             "moderation_status IN ('pending','approved','rejected')",
             name="ck_questions_mod_status",
         ),
-        Index("ix_questions_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_questions_search_vector",
+              "search_vector", postgresql_using="gin"),
         Index("ix_questions_tags", "tags", postgresql_using="gin"),
     )
