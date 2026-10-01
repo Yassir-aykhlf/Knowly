@@ -1,4 +1,3 @@
-from app.models import attachment
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
