@@ -84,8 +84,7 @@ class Question(Base):
         CheckConstraint(
             "char_length(body) BETWEEN 30 AND 30000", name="ck_questions_body_len"
         ),
-        CheckConstraint("cardinality(tags) <= 5",
-                        name="ck_questions_tags_count"),
+        CheckConstraint("cardinality(tags) <= 5", name="ck_questions_tags_count"),
         CheckConstraint(
             "moderation_status IN ('pending','approved','rejected')",
             name="ck_questions_mod_status",
