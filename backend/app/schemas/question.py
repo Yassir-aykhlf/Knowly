@@ -4,14 +4,14 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.user import AuthorOut
-from app.models.answer import Answer
-from app.models.comment import Comment
-from app.models.attachment import Attachment
+from app.schemas.answer import AnswerOut          # this are just excpected types
+from app.schemas.comment import CommentOut        # well be defined in future PRs
+from app.schemas.attachment import AttachmentOut
 
 
 class QuestionCreateIn(BaseModel):
-    title: str = ""
-    body: str = ""
+    title: str
+    body: str
     tags: list[str] = Field(default_factory=list)
     attachment_ids: list[uuid.UUID] = Field(default_factory=list)
 
@@ -32,7 +32,6 @@ class QuestionOut(BaseModel):
     moderation_note: str | None = None
     created_at: datetime
     updated_at: datetime
-    answers: list[Answer] = Field(default_factory=list)
-    comments: list[Comment] = Field(default_factory=list)
-    attachments: list[Attachment] = Field(default_factory=list)
-    # attachments: list[AttachmentOut] = Field(default_factory=list)
+    answers: list[AnswerOut] = Field(default_factory=list)
+    comments: list[CommentOut] = Field(default_factory=list)
+    attachments: list[AttachmentOut] = Field(default_factory=list)
