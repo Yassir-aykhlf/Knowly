@@ -78,7 +78,7 @@ def validate_question_payload(payload: QuestionCreateIn) -> QuestionCreateIn:
     )
 
 
-@ router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
 async def create_question_endpoint(
     raw_payload: QuestionCreateIn,
     current_user: User = Depends(get_current_user),
