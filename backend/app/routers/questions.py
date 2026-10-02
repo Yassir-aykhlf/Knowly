@@ -1,3 +1,4 @@
+from app.models import question
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +11,7 @@ from app.schemas.question import QuestionCreateIn, QuestionOut
 from app.models.user import User
 from app.schemas.user import AuthorOut
 from app.schemas.attachment import AttachmentOut
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
@@ -20,9 +21,28 @@ TAGS_MAX, TAG_LEN_MIN, TAG_LEN_MAX = 5, 2, 30
 ATTACHMENTS_MAX = 10
 
 
-async def build_question_out(question: Question, user: User, attachments: list[AttachmentOut] | None = None) -> QuestionOut:
-    attach = attachments if attachments is not None else []
-    author = AuthorOut.from_user(user)
+@router.get("/{id}", response_model=QuestionOut)
+async def get_question_endpoint(
+    id: int,
+    user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db)
+):
+    gottenQuestion = db.get(Question, id)
+    if gottenQuestion is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found"
+        )
+
+    return build_question_out(question=gottenQuestion, )
+
+
+async def build_question_out(question: Question,
+                             user: User | None = None,
+                             attachments: list[AttachmentOut] | None = None
+                             ) -> QuestionOut:
+    attach = attachments if attachments is not None else question.attachments
+    author = AuthorOut.from_user(user) if user is not None else question.author
 
     return QuestionOut(
         id=question.id,
@@ -34,8 +54,8 @@ async def build_question_out(question: Question, user: User, attachments: list[A
         moderation_note=question.moderation_note,
         answers=[],
         comments=[],
-        vote_total=0,
-        view_count=0,
+        vote_total=question.vote_total,
+        view_count=question.view_count,
         created_at=question.created_at,
         updated_at=question.updated_at,
         attachments=attach
@@ -77,7 +97,7 @@ def validate_question_payload(payload: QuestionCreateIn) -> QuestionCreateIn:
     )
 
 
-@router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
+@ router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
 async def create_question_endpoint(
     raw_payload: QuestionCreateIn,
     current_user: User = Depends(get_current_user),
