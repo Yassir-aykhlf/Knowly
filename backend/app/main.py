@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.routers import auth, friends, health, messages, notifications, users, questions
+from app.routers import answers, auth, comments, friends, health, messages, notifications, users, questions, votes
 from app.schemas.common import error_body
 
 
@@ -96,3 +96,6 @@ app.include_router(notifications.router, prefix="/api")
 app.include_router(friends.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
 app.include_router(questions.router, prefix="/api")
+app.include_router(answers.router, prefix="/api")
+app.include_router(comments.router, prefix="/api")
+app.include_router(votes.router, prefix="/api")

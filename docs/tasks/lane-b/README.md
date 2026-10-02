@@ -1,115 +1,84 @@
-# Lane B — Q&A Core: your fourteen issues
+# Lane B: Q&A Core
 
-You own `questions`, `answers`, `comments` and `votes`, and the entire content lifecycle:
-create, read, edit, delete, vote, accept — plus the `content` service that Lanes A and D
-read through.
+Lane B is the core of Knowly: **questions, answers, comments and votes**, from the database table all the way to the button on screen.
 
-You are the gravity well of this app. Almost every other lane hooks into content you
-produce: Lane A's profile counts, Lane C's notifications, Lane D's moderation, files and
-search. Keep your seam clean and land your read paths early.
+The lane is split into two tracks that run in parallel. Both of you start with the same setup ticket. After that, each of you owns one track.
 
-One thing to internalise before you start: **all content is born `approved`.** The schema
-defaults it that way, and the moderation seam (D-02) is a stub that approves everything
-until Lane D ships. Nothing you build waits on that.
+## The tickets
 
-## The order to work in
+Everyone starts with [00 · Setup and the map](00-setup-and-map.md).
 
-```
-B-01 ──┬─> B-02 ──> B-05 ──┐
-       ├─> B-03 ───────────┼─> B-11
-       ├─> B-04 ──┬─> B-06 ──> B-07
-       │          ├─> B-08
-       │          └─> B-09
-       └─> B-10                        B-14 (independent — build early)
-B-02, B-05 ──> B-12
-B-04/06/08/09/10 + B-14 ──> B-13
-```
-
-**B-01 first, and finish it.** Three other lanes are on stub visibility rules until you
-ship, and every task in your own lane composes it.
-
-Then B-02/B-03/B-04 as a block — B-02 returns B-04's payload, so building those two
-together is usually less work than building them apart. After that, B-05 through B-10 are
-genuinely parallel. **B-14 depends on nothing** — if you're blocked, take it, and Lane D
-stops waiting on `<MarkdownBody>`.
-
-| # | Issue | Size | Needs first |
-|---|---|---|---|
-| B-01 | Content seam | ~1.5–2 d | — |
-| B-02 | Create question | ~1 d | B-01 |
-| B-03 | Question feed | ~1 d | B-01 |
-| B-04 | Question detail | ~1.5 d | B-01 |
-| B-05 | Edit & delete question | ~1 d | B-04 |
-| B-06 | Create answer | ~1 d | B-04 |
-| B-07 | Edit & delete answer | ~1 d | B-06 |
-| B-08 | Accept answer | ~0.5 d | B-06 |
-| B-09 | Comments | ~1 d | B-04 |
-| B-10 | Voting | ~0.5–1 d | B-01 |
-| B-11 | Home feed page | ~1 d | B-03 |
-| B-12 | Ask / edit question page | ~1–1.5 d | B-02, B-05 |
-| B-13 | Question detail page | ~2–2.5 d | B-04/06/08/09/10, B-14 |
-| B-14 | MarkdownBody + VoteArrows | ~1 d | — |
-
-## The tests: work test-first
-
-The suite in `backend/tests/` is already written and starts **red**. Read your task's
-test file **before** you write code — it settles things the prose leaves open (is the
-response `{vote_total, my_vote}` exactly, or may it carry extra keys? does `total`
-respect the filter?).
-
-```bash
-docker-compose up --build
-docker-compose exec backend pytest tests/lane_b/test_b04_question_detail.py -v   # the task you're on
-docker-compose exec backend pytest tests/lane_b                                   # before every PR
-```
-
-| Issue | Its test file | Tests |
+| # | Track Q "Asking" (teammate 1) | Size |
 |---|---|---|
-| B-01 | `tests/lane_b/test_b01_content_seam.py` | 4 — called directly, no HTTP |
-| B-02 | `tests/lane_b/test_b02_create_question.py` | 5 |
-| B-03 | `tests/lane_b/test_b03_question_feed.py` | 3 |
-| B-04 | `tests/lane_b/test_b04_question_detail.py` | 4 |
-| B-05 | `tests/lane_b/test_b05_edit_delete_question.py` | 2 |
-| B-06 | `tests/lane_b/test_b06_create_answer.py` | 4 |
-| B-07 | `tests/lane_b/test_b07_edit_delete_answer.py` | 3 |
-| B-08 | `tests/lane_b/test_b08_accept_answer.py` | 4 |
-| B-09 | `tests/lane_b/test_b09_comments.py` | 4 |
-| B-10 | `tests/lane_b/test_b10_voting.py` | 4 |
-| B-11 | *(none — UI)* | covered by `test_b03` |
-| B-12 | *(none — UI)* | covered by `test_b02` + `test_b05` |
-| B-13 | *(none — UI)* | covered by `test_b04/06/08/09/10` + `m8` |
-| B-14 | *(none — UI)* | covered by `test_b10` |
+| Q1 | [Post a question](Q1-post-a-question.md) | L |
+| Q2 | [Open one question with everything under it](Q2-question-detail.md) | L |
+| Q3 | [Browse the questions](Q3-question-feed.md) | M |
+| Q4 | [Edit or withdraw a question](Q4-edit-delete-question.md) | M |
+| Q5 | [Accept an answer](Q5-accept-answer.md) | S |
+| Q6 | [Home page](Q6-home-page.md) | M |
+| Q7 | [Ask / edit page](Q7-ask-edit-page.md) | L |
 
-**Green is a floor, not a finish line.** Each issue's *The tests that grade this task*
-section says what its tests check **and what they don't**. In this lane the notable gaps:
-nothing checks that a page view leaves `updated_at` alone (B-04); nothing counts comments
-or votes after an **answer** delete (B-07); and **no lane-B test ever asserts a
-notification**, by design — lane tests never assert another lane's side effects.
+| # | Track P "Participating" (teammate 2) | Size |
+|---|---|---|
+| P1 | [Safe Markdown + moderation banner](P1-markdown-and-banner.md) | M |
+| P2 | [Answer a question](P2-answer-a-question.md) | M |
+| P3 | [Edit or remove an answer](P3-edit-delete-answer.md) | M |
+| P4 | [Comments](P4-comments.md) | M |
+| P5 | [Voting: endpoint + arrows](P5-voting.md) | L |
+| P6 | [The question page](P6-question-page.md) | XL |
 
-**Milestone tests** (`tests/milestones/`) assert exactly those cross-lane effects, and
-stay red until stubs get swapped. Four touch your code:
+Both tracks cover the whole stack. Track Q starts in the backend and ends on screens. Track P starts with a screen component, goes down to the backend, and comes back up for the final page.
 
-- `test_m2_content_seam.py` — **Lane A** swaps to your B-01 `visible_filter`; the owner's
-  profile counts start including their own held content.
-- `test_m3_notifications.py` — you swap **C-01** into B-06 and B-10; answers and first
-  votes start notifying.
-- `test_m4_moderation.py` — you swap **D-02** into B-02 and friends; flagged content is
-  actually held, hidden from strangers, and its author notified.
-- `test_m6_files.py` — you swap **D-09** into B-02/B-04; attachments appear in the
-  question detail.
-- `test_m8_ai_answer.py` — grades **your** AI-assisted rule in B-06 once Lane D's
-  conversations exist. Build the rule now; the test arrives later.
+## When you wait for your partner
 
-None of them gate your PRs. Run the relevant one the day after each swap.
+There are only three hand-offs between the tracks:
 
-## Four rules that apply to every issue
+- **P2 needs Q1 merged.** P2 uses the answer/comment output shapes and `services/screening.py` from Q1.
+- **Q7 needs P1 merged.** The ask page uses `MarkdownBody` for the preview and `ModerationBanner`.
+- **P6 needs Q2, Q5 and Q7 merged.** The question page reads Q2's endpoint, calls Q5's, and reuses Q7's validation helpers.
 
-1. **Never write an Alembic migration.** The schema is frozen and shared.
-2. **Never change existing shapes in `frontend/src/lib/types.ts`.**
-3. **Don't wait on anyone.** Stub what you don't own, mark it
-   `# STUB: swap for <task-id>`, and swap it the *day* the owner ships. You have four
-   sets of stubs: moderation (D-02), files (D-09/D-10), notifications (C-01), and the AI
-   prefill (D-05).
-4. **You own one seam three lanes import** — `services/content.py`. Its signatures are
-   already written into the stub so others could code against them. Don't change one
-   without asking; announce the day B-01 lands.
+If you're blocked, review your partner's open PR.
+
+## How to work a ticket
+
+1. **Can you already…?** Answer these quick questions honestly. Skip the reading for any concept you can already explain out loud.
+2. **Concepts to learn.** Learn each concept when you reach the step that uses it, not all up front.
+3. **To do.** Work through the steps in order. Commit after each step or group of steps.
+4. **Done when.** Check every item yourself in the browser, in `/api/docs` or in psql.
+5. **Pull request.** Open one PR per ticket. Your partner reviews it; reading each other's code is how each of you learns the other half of the lane.
+
+## Who owns which file
+
+Owning a file means only you edit it, so the two of you never collide.
+
+**Track Q owns:**
+
+- `backend/app/routers/questions.py`
+- `backend/app/services/questions.py`, `backend/app/services/screening.py`
+- `backend/app/schemas/question.py`, `backend/app/schemas/attachment.py`
+- the `…Out` classes in `backend/app/schemas/answer.py` and `backend/app/schemas/comment.py`
+- `frontend/src/components/QuestionCard.tsx`, `frontend/src/pages/HomePage.tsx`, `frontend/src/pages/AskPage.tsx`
+- the question rules in `frontend/src/lib/validation.ts`, and the edit route in `frontend/src/App.tsx`
+
+**Track P owns:**
+
+- `backend/app/routers/answers.py`, `backend/app/routers/comments.py`, `backend/app/routers/votes.py` (new)
+- `backend/app/schemas/vote.py`
+- the `…Create` / `…Update` classes appended to `schemas/answer.py` and `schemas/comment.py`
+- `frontend/src/components/MarkdownBody.tsx`, `ModerationBanner.tsx`, `VoteArrows.tsx`
+- `frontend/src/pages/QuestionDetailPage.tsx`
+- `validateComment`, appended to `frontend/src/lib/validation.ts`
+
+**Shared:** `backend/app/main.py`. Each of you adds one `include_router` line; if git reports a conflict there, keep both lines.
+
+## Rules
+
+- Never write an Alembic migration. The database schema is shared and frozen.
+- Never change the existing types in `frontend/src/lib/types.ts`. Other lanes depend on them.
+- Code marked `# STUB` belongs to another lane. Call it, but don't fill it in.
+- One branch and one PR per ticket, always starting from the latest `main`: `git switch main && git pull && git switch -c feat/q1-post-a-question`.
+
+## Still stubbed at the end
+
+- **Moderation (Lane D, task D-02)** approves everything for now. When it ships, delete the two notification calls marked `# STUB` in `services/screening.py`, or users will get every notification twice.
+- **File attachments (Lane D, tasks D-09 and D-10).** Attachment lists stay empty until then.
