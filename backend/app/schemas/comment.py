@@ -2,8 +2,13 @@ import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+from typing import TYPE_CHECKING
 
 from app.schemas.user import AuthorOut
+
+
+if TYPE_CHECKING:
+    from app.models import Answer, Comment
 
 
 class CommentOut(BaseModel):

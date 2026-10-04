@@ -1,10 +1,15 @@
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing import TYPE_CHECKING
 
 from app.schemas.user import AuthorOut
 from app.schemas.comment import CommentOut
 from app.schemas.attachment import AttachmentOut
+from app.services.content import viewer_votes, vote_totals
+
+if TYPE_CHECKING:
+    from app.models import Answer, Comment
 
 
 class AnswerOut(BaseModel):
