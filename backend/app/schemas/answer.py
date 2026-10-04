@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
 from typing import TYPE_CHECKING
 
@@ -28,26 +30,31 @@ class AnswerOut(BaseModel):
 
     @classmethod
     def from_answer(
-        cls,
-        answer: "Answer",
-        *,
-        vote_total: int = 0,
-        my_vote: int = 0,
-        comments: list["CommentOut"] | None = None,
-        attachments: list[AttachmentOut] | None = None,
+        cls, answer, vote_total=0, my_vote=0, comments=None, attachments=None
     ) -> "AnswerOut":
         return cls(
             id=str(answer.id),
             body=answer.body,
-            author=AuthorOut.from_user(answer.author),  # must be eager-loaded
+            author=AuthorOut.from_user(answer.author),
             is_ai_assisted=answer.is_ai_assisted,
             vote_total=vote_total,
             my_vote=my_vote,
             moderation_status=answer.moderation_status,
             moderation_note=answer.moderation_note,
-            created_at=answer.created_at.isoformat(),   # datetime -> str
+            created_at=answer.created_at.isoformat(),
             updated_at=answer.updated_at.isoformat(),
-            comments=[CommentOut.from_comment(c)
-                      for c in (comments or [])],  # ADAPT
+            comments=comments or [],
             attachments=attachments or [],
         )
+
+
+class AnswerCreate(BaseModel):
+    body: str
+    is_ai_assisted: bool = False
+    from_conversation_id: str | None = None
+    attachment_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class AnswerUpdate(BaseModel):
+    body: str
+    attachment_ids: list[uuid.UUID] = Field(default_factory=list)

@@ -1,4 +1,6 @@
 import uuid
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 from typing import TYPE_CHECKING
 
@@ -23,17 +25,25 @@ class CommentOut(BaseModel):
     updated_at: str
 
     @classmethod
-    def from_comment(cls, comment: "Comment") -> "CommentOut":
+    def from_comment(cls, comment) -> "CommentOut":
         return cls(
-            id=str(comment.id),                           # UUID -> str
+            id=str(comment.id),
             parent_type=comment.parent_type,
-            # schema wants uuid.UUID, so no str()
             parent_id=comment.parent_id,
             body=comment.body,
-            author=AuthorOut.from_user(
-                comment.author),   # must be eager-loaded
+            author=AuthorOut.from_user(comment.author),
             moderation_status=comment.moderation_status,
             moderation_note=comment.moderation_note,
             created_at=comment.created_at.isoformat(),
             updated_at=comment.updated_at.isoformat(),
         )
+
+
+class CommentCreate(BaseModel):
+    parent_type: Literal["question", "answer"]
+    parent_id: uuid.UUID
+    body: str
+
+
+class CommentUpdate(BaseModel):
+    body: str
