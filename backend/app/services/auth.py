@@ -11,39 +11,32 @@ from app.models.user import User
 from app.models.session import Session
 
 from app.schemas.auth import RegisterIn
-from app.schemas.auth import LoginIn
+from app.schemas.auth import LoginIn , PasswordChangeIn
 from app.config import settings
 
 from app.services.security import hash_password, verify_password, DUMMY_PASSWORD_HASH
 
-from app.services.session import create_session, delete_session
+from app.services.session import create_session, delete_session, get_optional_session, delete_other_sessions
 
 from app.services.session import SESSION_COOKIE_NAME 
 
 
-async def get_optional_user(request: Request, db: AsyncSession = Depends(get_db)) -> User | None:
-    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
-    if raw_token is None:
-        return None
-    hash_token = Session.hash_token(raw_token)
 
-    query = select(Session).options(selectinload(Session.user)).where(Session.token_hash == hash_token)
-
-    result = await db.execute(query)
-
-    session = result.scalar_one_or_none()
+async def get_optional_user(
+    session: Session | None = Depends(get_optional_session),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
 
     if session is None:
         return None
-    
-    if datetime.utcnow() >= session.expires_at :
-        await db.delete(session)
-        await db.flush()
-        return None
-    
-    return session.user
-    
 
+    stmt = select(User).where(
+        User.id == session.user_id
+    )
+
+    result = await db.execute(stmt)
+
+    return result.scalar_one_or_none()
 
 
 async def get_current_user(user: User | None = Depends(get_optional_user)) -> User:
@@ -167,3 +160,45 @@ async def logout_user(
 
     if session is not None:
         await delete_session(db, session)
+
+
+async def change_password(
+    db: AsyncSession,
+    user: User,
+    current_session: Session,
+    data: PasswordChangeIn,
+) -> None:
+
+    password_ok = (
+        user.password_hash is not None
+        and verify_password(
+            data.current_password,
+            user.password_hash,
+        )
+    )
+
+    if not password_ok:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "invalid_credentials",
+                "message": "Current password is incorrect",
+                "fields": {
+                    "current_password": "Current password is incorrect",
+                },
+            },
+        )
+
+    new_password_hash = hash_password(
+        data.new_password
+    )
+
+    user.password_hash = new_password_hash
+
+    await delete_other_sessions(
+        db,
+        user.id,
+        current_session.id,
+    )
+
+    await db.flush()

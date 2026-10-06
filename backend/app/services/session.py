@@ -1,13 +1,14 @@
 from app.models.session import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 import uuid
 import secrets
 from datetime import datetime, timedelta
+from app.db.session import get_db
 from app.config import settings
 from typing import TYPE_CHECKING
 
-from fastapi import Response
+from fastapi import Depends, HTTPException, Request, Response
 
 
 if TYPE_CHECKING :
@@ -47,7 +48,6 @@ async def delete_other_sessions(
     )
 
     await db.execute(stmt)
-
     
 
 def set_session_cookie(response: Response, raw_token: str) -> None:
@@ -61,6 +61,46 @@ def set_session_cookie(response: Response, raw_token: str) -> None:
         path="/",
     )
 
+async def get_optional_session(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> Session | None:
 
-    
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+
+    if raw_token is None:
+        return None
+
+    token_hash = Session.hash_token(raw_token)
+
+    stmt = select(Session).where(
+        Session.token_hash == token_hash
+    )
+
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if session is None:
+        return None
+
+    if datetime.utcnow() >= session.expires_at:
+        await delete_session(db, session)
+        return None
+
+    return session
+
+async def get_current_session(
+    session: Session | None = Depends(get_optional_session),
+) -> Session:
+
+    if session is None:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "unauthenticated",
+                "message": "Authentication required",
+            },
+        )
+
+    return session
 

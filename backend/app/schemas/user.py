@@ -29,3 +29,28 @@ class UserMeOut(BaseModel):
             has_password=user.password_hash is not None,
     )
 
+
+class UserPublicOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    bio: str | None
+    avatar_url : str | None
+    created_at : datetime
+    question_count: int
+    answer_count : int 
+    accepted_answer_count : int 
+    is_anonymized : bool
+    friendship : bool 
+
+    @classmethod
+    def from_user(cls, user: User) -> "UserPublicOut":
+        return cls(
+            id= user.id,
+            username = user.username,
+            bio = user.bio,
+            avatar_url = user.avatar_path,
+            created_at = user.created_at,
+            question_cout = 
+        )
+
+
