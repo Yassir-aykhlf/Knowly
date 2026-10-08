@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.config import settings
 from app.routers import answers, auth, comments, friends, health, messages, notifications, users, questions, votes
 from app.schemas.common import error_body
+from app.routers import ai
 
 
 logger = logging.getLogger("knowly")
@@ -99,3 +100,4 @@ app.include_router(questions.router, prefix="/api")
 app.include_router(answers.router, prefix="/api")
 app.include_router(comments.router, prefix="/api")
 app.include_router(votes.router, prefix="/api")
+app.include_router(ai.router, prefix="/api")
