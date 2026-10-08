@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -7,6 +8,8 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
+from app.db.session import AsyncSessionLocal
+from app.services.admin import bootstrap_initial_admin
 from app.routers import answers, auth, comments, friends, health, messages, notifications, users, questions, votes
 from app.schemas.common import error_body
 from app.routers import ai
@@ -14,7 +17,17 @@ from app.routers import ai
 
 logger = logging.getLogger("knowly")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.INITIAL_ADMIN_EMAIL.strip():
+        async with AsyncSessionLocal() as db:
+            await bootstrap_initial_admin(db)
+            await db.commit()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Knowly API",
     version="0.1.0",
     docs_url="/api/docs",
