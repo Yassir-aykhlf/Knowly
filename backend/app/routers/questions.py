@@ -1,8 +1,9 @@
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, func, exists
 from collections import defaultdict
 from uuid import UUID
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, or_, and_
@@ -13,15 +14,17 @@ from app.services.content import visible_filter,  vote_totals, viewer_votes
 
 from app.db.session import get_db
 
-from app.schemas.question import QuestionCreateIn, QuestionOut
+from app.schemas.question import QuestionCreateIn, QuestionOut, QuestionPage, QuestionListItem
 from app.schemas.user import AuthorOut
 from app.schemas.answer import AnswerOut
 from app.schemas.comment import CommentOut
+from app.schemas.common import excerpt
 
 from app.services.auth import get_current_user, get_optional_user
 from app.services.questions import load_viewable_question
 from app.services.files import attachments_for
 
+from app.models.vote import Vote
 from app.models.user import User
 from app.models.question import Question
 from app.models.answer import Answer
@@ -33,6 +36,88 @@ TITLE_MIN, TITLE_MAX = 10, 200
 BODY_MIN, BODY_MAX = 30, 30_000
 TAGS_MAX, TAG_LEN_MIN, TAG_LEN_MAX = 5, 2, 30
 ATTACHMENTS_MAX = 10
+
+
+@router.get("", response_model=QuestionPage)
+async def list_questions(
+    sort: Literal["newest", "votes", "unanswered"] = "newest",
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_optional_user),  # None when logged out
+):
+    # Conditions shared by the count and the page query
+    conditions = [visible_filter(Question, viewer)]
+    if sort == "unanswered":
+        # Plain "approved", not visible_filter: otherwise an answerer's own
+        # pending answer would hide the question from them.
+        conditions.append(
+            ~exists().where(
+                Answer.question_id == Question.id,
+                Answer.moderation_status == "approved",  # ⚠ column/enum name
+            )
+        )
+
+    total = await db.scalar(
+        select(func.count()).select_from(Question).where(*conditions)
+    )
+
+    stmt = select(Question).where(
+        *conditions).options(selectinload(Question.author))
+
+    if sort == "votes":
+        vote_sum = (
+            select(
+                Vote.target_id.label("question_id"),
+                func.sum(Vote.value).label("score"),
+            )
+            .where(Vote.target_type == "question")
+            .group_by(Vote.target_id)
+            .subquery()
+        )
+        stmt = stmt.outerjoin(
+            vote_sum, vote_sum.c.question_id == Question.id
+        ).order_by(
+            func.coalesce(vote_sum.c.score, 0).desc(),
+            Question.created_at.desc(),
+            Question.id.desc(),  # tie-breaker
+        )
+    else:  # newest and unanswered
+        stmt = stmt.order_by(Question.created_at.desc(), Question.id.desc())
+
+    result = await db.scalars(stmt.offset((page - 1) * limit).limit(limit))
+    questions = result.all()
+
+    # Card numbers for this page's ids only
+    ids = [q.id for q in questions]
+
+    answer_counts = {}
+    if ids:
+        rows = await db.execute(
+            select(Answer.question_id, func.count())
+            .where(Answer.question_id.in_(ids), Answer.moderation_status == "approved")
+            .group_by(Answer.question_id)
+        )
+        answer_counts = dict(rows.all())
+
+    vtotals = await vote_totals(db=db, target_type="questions", ids=ids)
+
+    items = [
+        QuestionListItem(
+            id=q.id,
+            title=q.title,
+            excerpt=excerpt(q.body),
+            tags=q.tags,
+            author=AuthorOut.from_user(q.author),
+            vote_total=vtotals.get(q.id, 0),
+            answer_count=answer_counts.get(q.id, 0),
+            created_at=q.created_at,
+            view_count=q.view_count,
+            has_accepted_answer=True,
+        )
+        for q in questions
+    ]
+    return QuestionPage(items=items, total=total, page=page, limit=limit)
 
 
 @router.get("/{question_id}", response_model=QuestionOut)
