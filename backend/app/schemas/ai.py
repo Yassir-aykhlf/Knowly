@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ConversationCreate(BaseModel):
@@ -35,3 +35,17 @@ class MessageOut(BaseModel):
 
 class ConversationDetail(ConversationOut):
     messages: list[MessageOut]
+
+
+class MessageCreate(BaseModel):
+    content: str = Field(max_length=8000)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def clean_content(cls, value: str) -> str:
+        if not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            raise ValueError("Message must not be empty")
+        return value
