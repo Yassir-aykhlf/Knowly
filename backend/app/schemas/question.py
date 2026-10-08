@@ -3,10 +3,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.user import AuthorOut
-from app.schemas.answer import AnswerOut          # this are just excpected types
-from app.schemas.comment import CommentOut        # well be defined in future PRs
+from app.schemas.user import AuthorOut, ProfileQuestionOut
+from app.schemas.answer import AnswerOut
+from app.schemas.comment import CommentOut
 from app.schemas.attachment import AttachmentOut
+
+
+QuestionListItem = ProfileQuestionOut
 
 
 class QuestionCreateIn(BaseModel):
@@ -35,3 +38,10 @@ class QuestionOut(BaseModel):
     answers: list[AnswerOut] = Field(default_factory=list)
     comments: list[CommentOut] = Field(default_factory=list)
     attachments: list[AttachmentOut] = Field(default_factory=list)
+
+
+class QuestionPage(BaseModel):
+    items: list[QuestionListItem]
+    total: int
+    page: int
+    limit: int
