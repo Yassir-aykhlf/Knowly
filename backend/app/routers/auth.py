@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.services.admin import is_initial_admin
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginIn
@@ -22,11 +22,6 @@ from app.services.session import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def is_initial_admin(email: str) -> bool:
-    admin = settings.INITIAL_ADMIN_EMAIL
-    return bool(admin) and email.lower() == admin.lower()
 
 
 @router.post("/register", status_code=201, response_model=UserMeOut)
