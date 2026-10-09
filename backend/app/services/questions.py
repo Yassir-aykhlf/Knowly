@@ -15,7 +15,7 @@ ATTACHMENTS_MAX = 10
 
 
 def clean_question_fields(
-    title: str,
+        title: str,
         body: str, tags: list[str],
         attachment_ids: list[UUID]):
     errors = {}
