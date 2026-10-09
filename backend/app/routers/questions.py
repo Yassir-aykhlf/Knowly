@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, or_, and_
 
 from app.services.moderation import screen_and_stage
-from app.services.files import bind_attachments
 from app.services.content import visible_filter,  vote_totals, viewer_votes
 
 from app.db.session import get_db
@@ -38,6 +37,22 @@ TAGS_MAX, TAG_LEN_MIN, TAG_LEN_MAX = 5, 2, 30
 ATTACHMENTS_MAX = 10
 
 
+@router.put("/{question_id}", response_model=QuestionOut)
+async def update_question(question_id: UUID,
+                          user: User | None = Depends(get_optional_user),
+                          db: AsyncSession = Depends(get_db)):
+    """update (question by it's id) request handler"""
+    return None
+
+
+@router.delete("/{question_id}", response_model=QuestionOut)
+async def update_question(question_id: UUID,
+                          user: User | None = Depends(get_optional_user),
+                          db: AsyncSession = Depends(get_db)):
+    """delete (question by it's id) request handler"""
+    return None
+
+
 @router.get("", response_model=QuestionPage)
 async def list_questions(
     sort: Literal["newest", "votes", "unanswered"] = "newest",
@@ -46,6 +61,7 @@ async def list_questions(
     db: AsyncSession = Depends(get_db),
     viewer: User | None = Depends(get_optional_user),  # None when logged out
 ):
+    """get (question list into QuestionPage as QuestionListItem) request handler"""
     # Conditions shared by the count and the page query
     conditions = [visible_filter(Question, viewer)]
     if sort == "unanswered":
@@ -126,6 +142,7 @@ async def get_question_endpoint(
     user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
+    """get (single question by id) request handler"""
     question = await load_viewable_question(db=db, question_id=question_id, viewer=user)
     return await build_question_out(db=db, question=question, user=user)
 
@@ -252,6 +269,7 @@ async def create_question_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """post request handler"""
     currUser = current_user
     data = validate_question_payload(raw_payload)
 
@@ -268,15 +286,6 @@ async def create_question_endpoint(
     # STUB: swap for D-09
     text_to_screen = f"{data.title}\n\n{data.body}"
     await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
-
-    # STUB: swap for D-09
-    attachments = await bind_attachments(
-        db=db,
-        attachment_ids=data.attachment_ids,
-        parent_type="question",
-        parent_id=new_question.id,
-        user=currUser
-    )
 
     await db.commit()
     await db.refresh(new_question)
