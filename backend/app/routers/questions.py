@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.services.moderation import screen_and_stage
-from app.services.content import visible_filter,  vote_totals
+from app.services.content import load_owned, visible_filter,  vote_totals
 
 from app.db.session import get_db
 
@@ -33,7 +33,32 @@ async def update_question(
         user: User | None = Depends(get_optional_user),
         db: AsyncSession = Depends(get_db)):
     """update (question by it's id) request handler"""
-    return None
+    # 1. load + validate (ownership first, so a stranger gets 403 before any 400)
+    question = await load_owned(
+        db=db, model=Question,
+        obj_id=question_id,
+        user=user,
+        kind="question")
+
+    title, body, tags, attachment_ids = clean_question_fields(
+        title=payload.title,
+        body=payload.body,
+        tags=payload.tags,
+        attachment_ids=payload.attachment_ids)
+
+    question.title = title
+    question.body = body
+    question.tags = tags
+    question.attachment_ids = attachment_ids
+
+    # 2. screen again: the new verdict overwrites the old status
+    await screen_and_stage(db=db, kind="question", text=body, obj=question)
+
+    # 3. finish
+    # TODO(stub): re-bind attachments here
+    await db.commit()
+    await db.refresh(question)
+    return await build_question_out(db, question, user)
 
 
 @router.delete("/{question_id}", response_model=QuestionOut)
@@ -147,25 +172,23 @@ async def create_question_endpoint(
 ):
     """post request handler"""
     currUser = current_user
-    data = clean_question_fields(
+    title, body, tags, attachment_ids = clean_question_fields(
         title=raw_payload.title,
         body=raw_payload.body,
         tags=raw_payload.tags,
         attachment_ids=raw_payload.attachment_ids)
-    # data = validate_question_payload(raw_payload)
 
     new_question = Question(
-        title=data["title"],
-        body=data["body"],
-        tags=data["tags"],
-        author=current_user
-    )
+        title=title,
+        body=body,
+        tags=tags,
+        author=current_user)
 
     db.add(new_question)
     await db.flush()
 
     # STUB: swap for D-09
-    text_to_screen = f"{data['title']}\n\n{data['body']}"
+    text_to_screen = f"{title}\n\n{body}"
     await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
 
     await db.commit()
@@ -174,5 +197,4 @@ async def create_question_endpoint(
     return await build_question_out(
         db=db,
         question=new_question,
-        user=currUser
-    )
+        user=currUser)
