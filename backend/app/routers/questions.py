@@ -1,13 +1,16 @@
-from sqlalchemy import select, func, exists
+import logging
+
+from app.services.files import delete_attachments_for, delete_file
+from sqlalchemy import select, func, exists, update, delete
 from uuid import UUID
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.services.moderation import screen_and_stage
-from app.services.content import load_owned, visible_filter,  vote_totals
+from app.services.content import delete_comments_for, delete_votes_for, load_owned, visible_filter,  vote_totals
 
 from app.db.session import get_db
 
@@ -24,6 +27,8 @@ from app.models.question import Question
 from app.models.answer import Answer
 
 router = APIRouter(prefix="/questions", tags=["questions"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.put("/{question_id}", response_model=QuestionOut)
@@ -61,13 +66,52 @@ async def update_question(
     return await build_question_out(db, question, user)
 
 
-@router.delete("/{question_id}", response_model=QuestionOut)
+@router.delete("/{question_id}", status_code=204)
 async def update_question(
         question_id: UUID,
         user: User | None = Depends(get_optional_user),
         db: AsyncSession = Depends(get_db)):
     """delete (question by it's id) request handler"""
-    return None
+    question = await load_owned(db, Question, question_id, user, "question")
+    answer_ids = list(
+        (await db.execute(select(Answer.id).where(Answer.question_id == question_id)))
+        .scalars()
+        .all()
+    )
+
+    # one transaction, in this order
+    # the accepted_answer_id FK has no ON DELETE SET NULL in the real DB, clear it by hand
+    await db.execute(
+        update(Question)
+        .where(Question.id == question_id)
+        .values(accepted_answer_id=None)
+    )
+
+    # comments and votes for the question and all its answers
+    #     ASSUMED signature: (db, target_type, ids)
+    await delete_comments_for(db, "question", [question_id])
+    await delete_comments_for(db, "answer", answer_ids)
+    await delete_votes_for(db, "question", [question_id])
+    await delete_votes_for(db, "answer", answer_ids)
+
+    # attachment rows (stub returns []), keep the paths for after the commit
+    paths = []
+    paths += await delete_attachments_for(db, "question", [question_id])
+    paths += await delete_attachments_for(db, "answer", answer_ids)
+
+    # delete the question; answers go via the real ON DELETE CASCADE on answers.question_id.
+    #     Core statement, not db.delete(obj), which would lazy-load relationships in async.
+    await db.execute(delete(Question).where(Question.id == question_id))
+    await db.commit()
+
+    # file cleanup only after the commit, so a failed commit never orphans DB rows from files.
+    for path in paths:
+        try:
+            delete_file(path)
+        except Exception:
+            logger.exception("Failed to delete file %s", path)
+
+    return Response(status_code=204)
 
 
 @router.get("", response_model=QuestionPage)
@@ -87,7 +131,7 @@ async def list_questions(
         conditions.append(
             ~exists().where(
                 Answer.question_id == Question.id,
-                Answer.moderation_status == "approved",  # ⚠ column/enum name
+                Answer.moderation_status == "approved",
             )
         )
 
