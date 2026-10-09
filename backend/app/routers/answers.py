@@ -12,7 +12,7 @@ from app.models.answer import Answer
 from app.models.comment import Comment
 from app.models.question import Question
 from app.models.user import User
-from app.routers.questions import ATTACHMENTS_MAX, BODY_MAX, BODY_MIN
+from app.services.questions import ATTACHMENTS_MAX, BODY_MAX, BODY_MIN
 from app.schemas.answer import AnswerCreate, AnswerOut, AnswerUpdate
 from app.schemas.comment import CommentOut
 from app.services import content, files, notifications
@@ -39,15 +39,18 @@ def _clean_answer_fields(body: str, attachment_ids: list) -> str:
 
     body = body.strip()
     if not (BODY_MIN <= len(body) <= BODY_MAX):
-        errors["body"] = f"Must be between {BODY_MIN} and {BODY_MAX} characters."
+        errors["body"] = f"""Must be between {
+            BODY_MIN} and {BODY_MAX} characters."""
 
     if len(attachment_ids) > ATTACHMENTS_MAX:
-        errors["attachment_ids"] = f"At most {ATTACHMENTS_MAX} attachments allowed."
+        errors["attachment_ids"] = f"""At most {
+            ATTACHMENTS_MAX} attachments allowed."""
 
     if errors:
         raise HTTPException(
             status_code=400,
-            detail={"code": "validation_error", "message": "Validation failed", "fields": errors},
+            detail={"code": "validation_error",
+                    "message": "Validation failed", "fields": errors},
         )
     return body
 
