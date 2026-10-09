@@ -137,12 +137,7 @@ def clean_question_fields(
                 "message": "Validation failed"}
         )
 
-    return {
-        "title": clean_title,
-        "body": body,
-        "tags": clean_tags,
-        "attachment_ids": attachment_ids
-    }
+    return clean_title, body, clean_tags, attachment_ids
 
 
 async def load_viewable_question(
