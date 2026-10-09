@@ -20,7 +20,7 @@ from app.schemas.comment import CommentOut
 from app.schemas.common import excerpt
 
 from app.services.auth import get_current_user, get_optional_user
-from app.services.questions import load_viewable_question
+from app.services.questions import clean_question_fields, load_viewable_question
 from app.services.files import attachments_for
 
 from app.models.vote import Vote
@@ -31,16 +31,13 @@ from app.models.comment import Comment
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
-TITLE_MIN, TITLE_MAX = 10, 200
-BODY_MIN, BODY_MAX = 30, 30_000
-TAGS_MAX, TAG_LEN_MIN, TAG_LEN_MAX = 5, 2, 30
-ATTACHMENTS_MAX = 10
-
 
 @router.put("/{question_id}", response_model=QuestionOut)
-async def update_question(question_id: UUID,
-                          user: User | None = Depends(get_optional_user),
-                          db: AsyncSession = Depends(get_db)):
+async def update_question(
+        question_id: UUID,
+        payload: QuestionCreateIn,
+        user: User | None = Depends(get_optional_user),
+        db: AsyncSession = Depends(get_db)):
     """update (question by it's id) request handler"""
     return None
 
@@ -271,12 +268,17 @@ async def create_question_endpoint(
 ):
     """post request handler"""
     currUser = current_user
-    data = validate_question_payload(raw_payload)
+    data = clean_question_fields(
+        title=raw_payload.title,
+        body=raw_payload.body,
+        tags=raw_payload.tags,
+        attachment_ids=raw_payload.attachment_ids)
+    # data = validate_question_payload(raw_payload)
 
     new_question = Question(
-        title=data.title,
-        body=data.body,
-        tags=data.tags,
+        title=data["title"],
+        body=data["body"],
+        tags=data["tags"],
         author=current_user
     )
 
@@ -284,12 +286,14 @@ async def create_question_endpoint(
     await db.flush()
 
     # STUB: swap for D-09
-    text_to_screen = f"{data.title}\n\n{data.body}"
+    text_to_screen = f"{data["title"]}\n\n{data["body"]}"
     await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
 
     await db.commit()
     await db.refresh(new_question)
 
-    return await build_question_out(db=db,
-                                    question=new_question,
-                                    user=currUser)
+    return await build_question_out(
+        db=db,
+        question=new_question,
+        user=currUser
+    )
