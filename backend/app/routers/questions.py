@@ -20,11 +20,6 @@ from app.services.files import delete_attachments_for, delete_file
 from fastapi import HTTPException
 import logging
 from sqlalchemy import update
-<< << << < HEAD
-
-== == == =
-
->>>>>> > main
 
 
 router = APIRouter(prefix="/questions", tags=["questions"])
