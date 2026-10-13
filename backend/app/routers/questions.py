@@ -1,34 +1,70 @@
-import logging
-
-from app.services.files import delete_attachments_for, delete_file
-from sqlalchemy import select, func, exists, update, delete
-from uuid import UUID
-from typing import Literal
-
-from fastapi import APIRouter, Depends, status, Query, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from app.services.moderation import screen_and_stage
-from app.services.content import delete_comments_for, delete_votes_for, load_owned, visible_filter,  vote_totals
-
-from app.db.session import get_db
-
-from app.schemas.question import QuestionCreateIn, QuestionOut, QuestionPage, QuestionListItem
-from app.schemas.user import AuthorOut
-from app.schemas.common import excerpt
-
-from app.services.auth import get_current_user, get_optional_user
-from app.services.questions import build_question_out, clean_question_fields, load_viewable_question
-
-from app.models.vote import Vote
-from app.models.user import User
-from app.models.question import Question
 from app.models.answer import Answer
+from app.models.question import Question
+from app.models.user import User
+from app.models.vote import Vote
+from app.services.questions import build_question_out, clean_question_fields, load_viewable_question
+from app.services.auth import get_current_user, get_optional_user
+from app.schemas.common import excerpt
+from app.schemas.user import AuthorOut
+from app.schemas.question import AcceptAnswerIn, AcceptAnswerOut, QuestionCreateIn, QuestionOut, QuestionPage, QuestionListItem
+from app.db.session import get_db
+from app.services.content import delete_comments_for, delete_votes_for, load_owned, visible_filter,  vote_totals
+from app.services.moderation import screen_and_stage
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, status, Query, Response
+from typing import Literal
+from uuid import UUID
+from sqlalchemy import select, func, exists, update, delete
+from app.services.files import delete_attachments_for, delete_file
+from fastapi import HTTPException
+import logging
+from sqlalchemy import update
+
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
 logger = logging.getLogger(__name__)
+
+
+@router.post("/{question_id}/accept-answer", response_model=AcceptAnswerOut)
+async def accept_answer(
+    question_id: UUID,
+    body: AcceptAnswerIn,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_optional_user),
+):
+    # 403 for non-askers (and 404 for a missing question, per load_owned)
+    question = await load_owned(db=db, model=Question, obj_id=question_id, user=user, kind="question")
+
+    if body.answer_id is not None:
+        answer = await db.get(Answer, body.answer_id)
+        if answer is None or answer.question_id != question.id:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "invalid_answer",
+                        "message": "Answer does not belong to this question"},
+            )
+
+        if answer.status != "approved":
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "invalid_answer",
+                        "message": "Only an approved answer can be accepted"},
+            )
+
+    await db.execute(
+        update(Question)
+        .where(Question.id == question.id)
+        .values(
+            accepted_answer_id=body.answer_id,
+            updated_at=Question.updated_at,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+
+    return AcceptAnswerOut(accepted_answer_id=body.answer_id)
 
 
 @router.put("/{question_id}", response_model=QuestionOut)

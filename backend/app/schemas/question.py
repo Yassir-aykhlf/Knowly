@@ -45,3 +45,11 @@ class QuestionPage(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class AcceptAnswerIn(BaseModel):
+    answer_id: uuid.UUID | None
+
+
+class AcceptAnswerOut(BaseModel):
+    accepted_answer_id: uuid.UUID | None
