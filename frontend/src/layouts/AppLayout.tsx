@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useHeartbeat } from '../hooks/useHeartbeat'
 
 const navItems = [
-  { to: '/home', label: 'Home' },
   { to: '/ask', label: 'Ask' },
   { to: '/search', label: 'Search' },
   { to: '/messages', label: 'Messages' },
@@ -27,8 +26,8 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-4 border-b border-slate-200 px-4 py-3">
-        <Link to="/home" className="text-lg font-semibold text-accent">Knowly</Link>
-        <nav className="flex flex-1 gap-3 text-sm">
+        <Link to="/home" className="-translate-y-0.5 text-lg font-semibold leading-none text-accent">Knowly</Link>
+        <nav className="flex flex-1 items-center gap-3 text-sm">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

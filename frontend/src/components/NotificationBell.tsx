@@ -8,6 +8,22 @@ import { describeNotification } from '../lib/notifications'
 import type { AppNotification, Paginated, UnreadCount } from '../lib/types'
 import Avatar from './Avatar'
 
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 22 22"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+      shapeRendering="crispEdges"
+      className={className}
+    >
+      <path d="M12 20V21H10V20H8V18H14V20H12M2 15H3V14H4V6H5V4H6V3H8V2H10V1H12V2H14V3H16V4H17V6H18V14H19V15H20V17H2V15M6 15H16V7H15V5H13V4H9V5H7V7H6V15Z" />
+    </svg>
+  )
+}
+
 export default function NotificationBell() {
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
@@ -131,7 +147,7 @@ export default function NotificationBell() {
 
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative flex items-center self-center">
 
       <button
         ref={buttonRef}
@@ -139,9 +155,9 @@ export default function NotificationBell() {
         aria-label={count > 0 ? `Notifications (${count} unread)` : 'Notifications'}
         aria-expanded={open}
         onClick={toggleDropdown}
-        className="relative"
+        className="relative flex items-center text-[#189388]"
       >
-        🔔
+        <BellIcon className="block h-[22px] w-[22px]" />
 
         {count > 0 && (
           <span className="absolute -right-2 -top-2 rounded-full bg-red-500 px-1.5 text-xs text-white">
