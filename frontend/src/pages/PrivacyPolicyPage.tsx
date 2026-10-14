@@ -1,5 +1,6 @@
-import Placeholder from '../components/Placeholder'
+import privacyContent from '../content/privacy-policy.md?raw'
+import MarkdownDoc from '../components/MarkdownDoc'
 
 export default function PrivacyPolicyPage() {
-  return <Placeholder name="Privacy Policy" />
+  return <MarkdownDoc content={privacyContent} />
 }
