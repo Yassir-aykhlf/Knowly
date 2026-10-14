@@ -3,12 +3,86 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-800 antialiased;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
-  /* Visible focus ring for keyboard users. */
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
   :focus-visible {
     outline: 2px solid #0d9488;
     outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .ah-card {
+    @apply rounded-card border border-line bg-surface;
+  }
+  .ah-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .ah-btn-primary {
+    @apply ah-btn bg-accent text-white hover:bg-accent-dark;
+  }
+  .ah-btn-secondary {
+    @apply ah-btn border border-[#d8dddb] bg-surface text-ink hover:bg-[#eef1ef];
+  }
+  .ah-btn-ai {
+    @apply ah-btn border border-[#d9dcf3] bg-surface text-ai hover:bg-ai-tint;
+  }
+  .ah-input {
+    @apply w-full rounded-[10px] border border-[#d8dddb] bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-[#aab3ae] focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+  .ah-tag {
+    @apply inline-flex rounded-md bg-[#eef2f0] px-2.5 py-1 font-mono text-[11.5px] leading-none text-[#46544f];
+  }
+  .ah-link {
+    @apply text-accent hover:underline;
+  }
+  .ah-h1 {
+    @apply font-display text-3xl font-bold tracking-tight text-ink;
+  }
+}
+
+@layer components {
+  .markdown-doc {
+    @apply leading-relaxed text-ink-soft;
+  }
+  .markdown-doc h1 {
+    @apply mb-4 mt-2 font-display text-3xl font-bold tracking-tight;
+  }
+  .markdown-doc h2 {
+    @apply mb-2 mt-8 font-display text-xl font-semibold;
+  }
+  .markdown-doc h3 {
+    @apply mb-2 mt-6 font-display text-lg font-semibold;
+  }
+  .markdown-doc p {
+    @apply my-3;
+  }
+  .markdown-doc ul {
+    @apply my-3 list-disc space-y-1 pl-6;
+  }
+  .markdown-doc ol {
+    @apply my-3 list-decimal space-y-1 pl-6;
+  }
+  .markdown-doc a {
+    @apply text-accent underline underline-offset-2;
+  }
+  .markdown-doc em {
+    @apply italic text-ink-muted;
+  }
+  .markdown-doc blockquote {
+    @apply my-3 border-l-2 border-line pl-4 italic text-ink-muted;
+  }
+  .markdown-doc code {
+    @apply rounded bg-[#eef2f0] px-1 py-0.5 font-mono text-[0.85em] text-[#2b3633];
+  }
+  .markdown-doc pre {
+    @apply my-3 overflow-x-auto rounded-[11px] bg-[#14201d] p-4 font-mono text-[13px] leading-relaxed text-[#dbe7e2];
+  }
+  .markdown-doc pre code {
+    @apply bg-transparent p-0 text-inherit;
   }
 }
