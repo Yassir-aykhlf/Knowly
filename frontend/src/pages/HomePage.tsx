@@ -4,12 +4,12 @@ import { api } from '../lib/api';
 import QuestionCard from '../components/QuestionCard';
 import type { QuestionPage } from '../lib/types';
 
-const SORTS = ['newest', 'top', 'unanswered'] as const;
+const SORTS = ['newest', 'votes', 'unanswered'] as const;
 type Sort = (typeof SORTS)[number];
 
 const SORT_LABELS: Record<Sort, string> = {
 	newest: 'Newest',
-	top: 'Top',
+	votes: 'Votes',
 	unanswered: 'Unanswered',
 };
 
@@ -85,7 +85,7 @@ export default function HomePage() {
 		setSearchParams({ sort: next, page: '1' }); // pushes history, so Back works
 	}
 
-	function goToPage(next: number) {
+	function govoteage(next: number) {
 		setSearchParams({ sort, page: String(next) });
 	}
 
@@ -136,7 +136,7 @@ export default function HomePage() {
 						<button
 							type="button"
 							disabled={page <= 1}
-							onClick={() => goToPage(page - 1)}
+							onClick={() => govoteage(page - 1)}
 							className="inline-block w-fit h-fit shrink-0 cursor-pointer whitespace-nowrap rounded-[10px] bg-[var(--accent,#0d9488)] px-[18px] py-[11px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#0b7d72] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent,#0d9488)]"
 						>
 							Previous
@@ -149,7 +149,7 @@ export default function HomePage() {
 						<button
 							type="button"
 							disabled={page >= totalPages}
-							onClick={() => goToPage(page + 1)}
+							onClick={() => govoteage(page + 1)}
 							className="inline-block w-fit h-fit shrink-0 cursor-pointer whitespace-nowrap rounded-[10px] bg-[var(--accent,#0d9488)] px-[18px] py-[11px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#0b7d72] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent,#0d9488)]"
 						>
 							Next
