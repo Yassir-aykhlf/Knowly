@@ -110,7 +110,7 @@ export default function HomePage() {
 
 		if (total === 0) {
 			return (
-				<div className="home-page__empty">
+				<div className="mx-auto max-w-xl px-4 py-16 text-center">
 					<p>No questions here yet.</p>
 					<p>
 						Be the first to <Link to="/ask">ask a question</Link>.
@@ -165,7 +165,7 @@ export default function HomePage() {
 			<header className="mx-auto px-10 py-10 w-full max-w-[880px] sm:px-10">
 				<div className='relative flex flex-row gap-8 w-full'>
 					<div className='flex flex-col gap-4 flex-1'>
-						<h1 className="m-0 text-[32px] font-bold tracking-[-0.03em] text-[#1a201e] [font-family:'Bricolage_Grotesque',sans-serif]">
+						<h1 className="m-0 text-[32px] font-extrabold tracking-[-0.03em] text-[#1a201e]">
 							Questions
 						</h1>
 
