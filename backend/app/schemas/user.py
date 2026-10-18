@@ -30,27 +30,98 @@ class UserMeOut(BaseModel):
     )
 
 
-class UserPublicOut(BaseModel):
+class FriendshipStateOut(BaseModel):
+    state : str
+    id : uuid.UUID | None
+
+
+class UserProfileOut(BaseModel):
     id: uuid.UUID
     username: str
     bio: str | None
     avatar_url : str | None
     created_at : datetime
+    
+    is_anonymized : bool
+
     question_count: int
     answer_count : int 
     accepted_answer_count : int 
-    is_anonymized : bool
-    friendship : bool 
 
+    friendship : FriendshipStateOut | None
+
+
+class AuthorOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    avatar_url: str | None
+    is_anonymized: bool
+
+
+
+
+class ProfileQuestionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    excerpt: str
+    tags: list[str]
+    author: AuthorOut
+    vote_total: int
+    answer_count: int
+    view_count: int
+    has_accepted_answer: bool
+    created_at: datetime
+
+
+class ProfileQuestionPage(BaseModel):
+    items: list[ProfileQuestionOut]
+    total: int
+    page: int
+    limit: int
+
+
+class ProfileAnswerOut(BaseModel):
+    id: uuid.UUID
+    question_id: uuid.UUID
+    question_title: str
+    excerpt: str
+    vote_total: int
+    is_accepted: bool
+    created_at: datetime
+
+
+class ProfileAnswerPage(BaseModel):
+    items: list[ProfileAnswerOut]
+    total: int
+    page: int
+    limit: int
+
+
+class ProfileUpdateIn(BaseModel):
+    username: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=30,
+        pattern=r"^[A-Za-z0-9_-]+$",
+    )
+
+    bio: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+
+    @field_validator("username")
     @classmethod
-    def from_user(cls, user: User) -> "UserPublicOut":
-        return cls(
-            id= user.id,
-            username = user.username,
-            bio = user.bio,
-            avatar_url = user.avatar_path,
-            created_at = user.created_at,
-            question_cout = 
-        )
+    def reject_null_username(cls, value):
+        if value is None:
+            raise ValueError("Username cannot be null")
 
+        return value
 
+    @field_validator("bio", mode="before")
+    @classmethod
+    def normalize_bio(cls, value):
+        if isinstance(value, str):
+            return value.strip() or None
+
+        return value

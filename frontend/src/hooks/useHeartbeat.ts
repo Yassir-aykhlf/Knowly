@@ -1,25 +1,32 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../lib/api'
 import { usePolling } from './usePolling'
 
-// While signed in, ping the heartbeat endpoint so the backend can mark us
-// "online". The server throttles to once per 30s, so a ~30s interval is plenty.
-// (The POST /users/me/heartbeat endpoint is built in task A-10 — until then this
-// simply no-ops on the resulting 404.)
-export function useHeartbeat() {
+const INTERVAL_MS = 30_000
+
+export function useHeartbeat(): void {
   const { user } = useAuth()
+  const userId = user?.id
+  const lastAttemptAt = useRef(0)
+
+  const beat = useCallback(() => {
+    if (!userId || document.hidden) return
+
+    const now = Date.now()
+    if (now - lastAttemptAt.current < INTERVAL_MS) return
+
+    lastAttemptAt.current = now
+
+    void api.post('/users/me/heartbeat').catch(() => {
+    })
+  }, [userId])
 
   useEffect(() => {
-    if (user) void api.post('/users/me/heartbeat').catch(() => {})
-  }, [user])
+    lastAttemptAt.current = 0
+    beat()
+  }, [beat])
 
-  usePolling(
-    () => {
-      void api.post('/users/me/heartbeat').catch(() => {})
-    },
-    30_000,
-    !!user,
-  )
+  usePolling(beat, INTERVAL_MS, Boolean(userId))
 }

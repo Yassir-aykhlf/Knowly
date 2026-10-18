@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import Depends, HTTPException, Request, Response
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -17,10 +17,6 @@ from app.config import settings
 from app.services.security import hash_password, verify_password, DUMMY_PASSWORD_HASH
 
 from app.services.session import create_session, delete_session, get_optional_session, delete_other_sessions
-
-from app.services.session import SESSION_COOKIE_NAME 
-
-
 
 async def get_optional_user(
     session: Session | None = Depends(get_optional_session),
