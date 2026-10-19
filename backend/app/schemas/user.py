@@ -1,8 +1,11 @@
+
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from app.models.user import User 
+
+from app.models.user import User
+
 
 class UserMeOut(BaseModel):
     id: uuid.UUID
@@ -27,28 +30,27 @@ class UserMeOut(BaseModel):
             created_at=user.created_at,
             is_anonymized=user.is_anonymized,
             has_password=user.password_hash is not None,
-    )
+        )
 
 
 class FriendshipStateOut(BaseModel):
-    state : str
-    id : uuid.UUID | None
+    state: str
+    id: uuid.UUID | None
 
 
 class UserProfileOut(BaseModel):
     id: uuid.UUID
     username: str
     bio: str | None
-    avatar_url : str | None
-    created_at : datetime
-    
-    is_anonymized : bool
+    avatar_url: str | None
+    created_at: datetime
+    is_anonymized: bool
 
     question_count: int
-    answer_count : int 
-    accepted_answer_count : int 
+    answer_count: int
+    accepted_answer_count: int
 
-    friendship : FriendshipStateOut | None
+    friendship: FriendshipStateOut | None
 
 
 class AuthorOut(BaseModel):
@@ -56,8 +58,6 @@ class AuthorOut(BaseModel):
     username: str
     avatar_url: str | None
     is_anonymized: bool
-
-
 
 
 class ProfileQuestionOut(BaseModel):
@@ -112,7 +112,7 @@ class ProfileUpdateIn(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def reject_null_username(cls, value):
+    def reject_null_username(cls, value: str | None) -> str:
         if value is None:
             raise ValueError("Username cannot be null")
 
@@ -120,7 +120,7 @@ class ProfileUpdateIn(BaseModel):
 
     @field_validator("bio", mode="before")
     @classmethod
-    def normalize_bio(cls, value):
+    def normalize_bio(cls, value: str | None) -> str | None:
         if isinstance(value, str):
             return value.strip() or None
 

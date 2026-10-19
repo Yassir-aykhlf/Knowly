@@ -1,31 +1,27 @@
 import uuid
 
-from fastapi import HTTPException, Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import func, select
-from app.models.question import Question
-from app.models.answer import Answer
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-
-
-from app.services.friends import friendship_state_for
-
-from app.models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-
-from app.schemas.user import(
-    UserProfileOut,
-      FriendshipStateOut,
-     AuthorOut,
-       ProfileQuestionOut,
-        ProfileQuestionPage,
-       ProfileAnswerOut, 
-       ProfileAnswerPage,
-       ProfileUpdateIn
-)
+from app.models.answer import Answer
+from app.models.question import Question
+from app.models.user import User
 from app.schemas.common import excerpt
+from app.schemas.user import (
+    AuthorOut,
+    FriendshipStateOut,
+    ProfileAnswerOut,
+    ProfileAnswerPage,
+    ProfileQuestionOut,
+    ProfileQuestionPage,
+    ProfileUpdateIn,
+    UserProfileOut,
+)
 from app.services.content import visible_filter, vote_totals
+from app.services.friends import friendship_state_for
 
 
 async def get_target_user(
@@ -48,30 +44,38 @@ async def get_target_user(
 
     return user
 
+
 async def get_user_profile(
-        db: AsyncSession,
-        target: User,
-        viewer : User | None,
-) -> UserProfileOut :
-    if target.is_anonymized :
+    db: AsyncSession,
+    target: User,
+    viewer: User | None,
+) -> UserProfileOut:
+    if target.is_anonymized:
         bio = None
         avatar_url = None
-    else :
+    else:
         bio = target.bio
         avatar_url = target.avatar_path
 
-    stmt = select(func.count()).select_from(Question).where(
-        Question.author_id == target.id,
-        visible_filter(Question, viewer)
-
+    stmt = (
+        select(func.count())
+        .select_from(Question)
+        .where(
+            Question.author_id == target.id,
+            visible_filter(Question, viewer),
+        )
     )
+
     result = await db.execute(stmt)
     question_count = result.scalar_one()
 
-
-    stmt = select(func.count()).select_from(Answer).where(
-        Answer.author_id == target.id,
-        visible_filter(Answer, viewer)
+    stmt = (
+        select(func.count())
+        .select_from(Answer)
+        .where(
+            Answer.author_id == target.id,
+            visible_filter(Answer, viewer),
+        )
     )
 
     result = await db.execute(stmt)
@@ -89,8 +93,9 @@ async def get_user_profile(
             visible_filter(Answer, viewer),
         )
     )
+
     result = await db.execute(stmt)
-    accepted_answer_count = result.scalar_one()  
+    accepted_answer_count = result.scalar_one()
 
     friendship = None
 
@@ -108,7 +113,7 @@ async def get_user_profile(
         friendship = FriendshipStateOut(
             state=state,
             id=friendship_id,
-        )   
+        )
 
     return UserProfileOut(
         id=target.id,
@@ -118,11 +123,10 @@ async def get_user_profile(
         created_at=target.created_at,
         question_count=question_count,
         answer_count=answer_count,
-        accepted_answer_count=accepted_answer_count ,
+        accepted_answer_count=accepted_answer_count,
         is_anonymized=target.is_anonymized,
-        friendship=friendship
+        friendship=friendship,
     )
-
 
 
 async def update_user_profile(
@@ -133,15 +137,21 @@ async def update_user_profile(
     changes = data.model_dump(exclude_unset=True)
 
     if "username" in changes and changes["username"] != user.username:
-        stmt = select(User.id).where(User.username == changes["username"])
+        stmt = select(User.id).where(
+            User.username == changes["username"]
+        )
+
         result = await db.execute(stmt)
+
         if result.scalar_one_or_none() is not None:
             raise HTTPException(
                 status_code=409,
                 detail={
                     "code": "conflict",
                     "message": "Username already taken",
-                    "fields": {"username": "Username already taken"},
+                    "fields": {
+                        "username": "Username already taken",
+                    },
                 },
             )
 
@@ -150,23 +160,40 @@ async def update_user_profile(
 
     try:
         await db.flush()
+
     except IntegrityError as exc:
         await db.rollback()
-        constraint_name = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
-        constraint_name = constraint_name or getattr(exc.orig, "constraint_name", None)
-        if "username" in changes and constraint_name == "users_username_key":
+
+        constraint_name = getattr(
+            getattr(exc.orig, "__cause__", None),
+            "constraint_name",
+            None,
+        )
+
+        constraint_name = constraint_name or getattr(
+            exc.orig,
+            "constraint_name",
+            None,
+        )
+
+        if (
+            "username" in changes
+            and constraint_name == "users_username_key"
+        ):
             raise HTTPException(
                 status_code=409,
                 detail={
                     "code": "conflict",
                     "message": "Username already taken",
-                    "fields": {"username": "Username already taken"},
+                    "fields": {
+                        "username": "Username already taken",
+                    },
                 },
             ) from exc
+
         raise
 
     return user
-
 
 
 async def get_user_questions(
@@ -176,9 +203,13 @@ async def get_user_questions(
     page: int,
     limit: int,
 ) -> ProfileQuestionPage:
-    stmt = select(func.count()).select_from(Question).where(
-        Question.author_id == target.id,
-        visible_filter(Question, viewer),
+    stmt = (
+        select(func.count())
+        .select_from(Question)
+        .where(
+            Question.author_id == target.id,
+            visible_filter(Question, viewer),
+        )
     )
 
     result = await db.execute(stmt)
@@ -187,14 +218,17 @@ async def get_user_questions(
     offset = (page - 1) * limit
 
     stmt = (
-    select(Question)
-    .where(
-        Question.author_id == target.id,
-        visible_filter(Question, viewer),
-    )
-    .order_by(Question.created_at.desc(), Question.id.desc())
-    .offset(offset)
-    .limit(limit)
+        select(Question)
+        .where(
+            Question.author_id == target.id,
+            visible_filter(Question, viewer),
+        )
+        .order_by(
+            Question.created_at.desc(),
+            Question.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
     )
 
     result = await db.execute(stmt)
@@ -202,7 +236,7 @@ async def get_user_questions(
 
     question_ids = [question.id for question in questions]
 
-    answer_counts :dict[uuid.UUID, int] = {}
+    answer_counts: dict[uuid.UUID, int] = {}
 
     if question_ids:
         stmt = (
@@ -221,16 +255,19 @@ async def get_user_questions(
             question_id: count
             for question_id, count in rows
         }
-    question_votes :dict[uuid.UUID, int] = await vote_totals(
-    db,
-    "question",
-    question_ids,
-)
+
+    question_votes: dict[uuid.UUID, int] = await vote_totals(
+        db,
+        "question",
+        question_ids,
+    )
 
     author = AuthorOut(
         id=target.id,
         username=target.username,
-        avatar_url=None if target.is_anonymized else target.avatar_path,
+        avatar_url=(
+            None if target.is_anonymized else target.avatar_path
+        ),
         is_anonymized=target.is_anonymized,
     )
 
@@ -246,7 +283,9 @@ async def get_user_questions(
             vote_total=question_votes.get(question.id, 0),
             answer_count=answer_counts.get(question.id, 0),
             view_count=question.view_count,
-            has_accepted_answer=question.accepted_answer_id is not None,
+            has_accepted_answer=(
+                question.accepted_answer_id is not None
+            ),
             created_at=question.created_at,
         )
 
@@ -258,7 +297,6 @@ async def get_user_questions(
         page=page,
         limit=limit,
     )
-
 
 
 async def get_user_answers(
@@ -286,13 +324,17 @@ async def get_user_answers(
             Answer.author_id == target.id,
             visible_filter(Answer, viewer),
         )
-        .order_by(Answer.created_at.desc(), Answer.id.desc())
+        .order_by(
+            Answer.created_at.desc(),
+            Answer.id.desc(),
+        )
         .offset((page - 1) * limit)
         .limit(limit)
     )
 
     result = await db.execute(stmt)
     answers = result.scalars().all()
+
     question_ids = list({
         answer.question_id
         for answer in answers
@@ -316,6 +358,7 @@ async def get_user_answers(
             question.id: question
             for question in questions
         }
+
     answer_ids = [answer.id for answer in answers]
 
     answer_votes = await vote_totals(
@@ -323,6 +366,7 @@ async def get_user_answers(
         "answer",
         answer_ids,
     )
+
     cards = []
 
     for answer in answers:
@@ -333,7 +377,9 @@ async def get_user_answers(
             is_accepted = False
         else:
             question_title = parent.title
-            is_accepted = parent.accepted_answer_id == answer.id
+            is_accepted = (
+                parent.accepted_answer_id == answer.id
+            )
 
         card = ProfileAnswerOut(
             id=answer.id,

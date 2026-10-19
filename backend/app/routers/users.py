@@ -1,32 +1,32 @@
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
-from fastapi import Response
-from sqlalchemy import update
-
-from app.models.user import User
-from app.models.session import Session
-
-from app.services.auth import get_current_user, change_password, get_optional_user
-from app.services.session import get_current_session
-from app.services.user import get_target_user, get_user_profile, update_user_profile
-from app.services.user import get_user_questions
-from app.services.user import get_user_answers
-from app.services.avatar import upload_avatar, remove_avatar
-from app.services.heartbeat import update_last_seen
-
-from fastapi import File, UploadFile
-
-from app.services.avatar import (
-    upload_avatar,
-    remove_avatar,
-)
-
-
-from app.schemas.user import UserMeOut, UserProfileOut,ProfileAnswerPage,ProfileQuestionPage, ProfileUpdateIn
-from app.schemas.auth import PasswordChangeIn
 
 from app.db.session import get_db
+from app.models.session import Session
+from app.models.user import User
+from app.schemas.auth import PasswordChangeIn
+from app.schemas.user import (
+    ProfileAnswerPage,
+    ProfileQuestionPage,
+    ProfileUpdateIn,
+    UserMeOut,
+    UserProfileOut,
+)
+from app.services.auth import (
+    change_password,
+    get_current_user,
+    get_optional_user,
+)
+from app.services.avatar import remove_avatar, upload_avatar
+from app.services.heartbeat import update_last_seen
+from app.services.session import get_current_session
+from app.services.user import (
+    get_target_user,
+    get_user_answers,
+    get_user_profile,
+    get_user_questions,
+    update_user_profile,
+)
 
 
 router = APIRouter(
@@ -56,7 +56,6 @@ async def update_password(
     current_session: Session = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-
     await change_password(
         db,
         user,
@@ -78,8 +77,10 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
     user = await update_user_profile(db, user, data)
+
     await db.commit()
     await db.refresh(user)
+
     return UserMeOut.from_user(user)
 
 
@@ -97,6 +98,7 @@ async def get_public_profile(
         target,
         viewer,
     )
+
 
 @router.get(
     "/{target_id}/questions",
@@ -116,6 +118,7 @@ async def get_profile_questions(
         page=page,
         limit=limit,
     )
+
 
 @router.get(
     "/{target_id}/answers",
@@ -147,7 +150,6 @@ async def post_avatar(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
-
     user = await upload_avatar(db, user, file)
 
     return UserMeOut.from_user(user)
@@ -162,17 +164,19 @@ async def delete_avatar(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
-
     user = await remove_avatar(db, user)
 
     return UserMeOut.from_user(user)
 
 
-@router.post("/me/heartbeat", status_code=204)
+@router.post(
+    "/me/heartbeat",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 async def heartbeat(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     await update_last_seen(db, user.id)
 
-    return Response(status_code=204)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

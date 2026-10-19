@@ -2,14 +2,17 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.auth import RegisterIn ,LoginIn
+from app.schemas.auth import LoginIn, RegisterIn
 from app.schemas.user import UserMeOut
-from app.services.auth import register_user, login_user, logout_user
-from app.services.session import set_session_cookie
+from app.services.auth import login_user, logout_user, register_user
+from app.services.session import SESSION_COOKIE_NAME, set_session_cookie
 
-from app.services.session import SESSION_COOKIE_NAME 
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+)
+
 
 @router.post(
     "/register",
@@ -21,7 +24,6 @@ async def register(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
-
     user, token = await register_user(db, data)
 
     await db.commit()
@@ -29,6 +31,7 @@ async def register(
     set_session_cookie(response, token)
 
     return UserMeOut.from_user(user)
+
 
 @router.post(
     "/login",
@@ -48,6 +51,7 @@ async def login(
 
     return UserMeOut.from_user(user)
 
+
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -57,7 +61,6 @@ async def logout(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
 
     await logout_user(db, raw_token)

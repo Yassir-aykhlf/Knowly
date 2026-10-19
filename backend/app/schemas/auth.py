@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+
 class RegisterIn(BaseModel):
     email: EmailStr
 
@@ -18,16 +19,22 @@ class RegisterIn(BaseModel):
     @classmethod
     def validate_password(cls, value: str) -> str:
         if not any(char.isalpha() for char in value):
-            raise ValueError("Password must contain at least one letter")
+            raise ValueError(
+                "Password must contain at least one letter"
+            )
 
         if not any(char.isdigit() for char in value):
-            raise ValueError("Password must contain at least one digit")
+            raise ValueError(
+                "Password must contain at least one digit"
+            )
 
         return value
 
+
 class LoginIn(BaseModel):
-    email : EmailStr
-    password : str
+    email: EmailStr
+    password: str
+
 
 class PasswordChangeIn(BaseModel):
     current_password: str
@@ -51,5 +58,3 @@ class PasswordChangeIn(BaseModel):
             )
 
         return value
-
-    

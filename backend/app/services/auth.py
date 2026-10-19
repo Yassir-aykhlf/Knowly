@@ -1,47 +1,53 @@
-import uuid
-from datetime import datetime
-
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-from app.models.user import User
-from app.models.session import Session
-
-from app.schemas.auth import RegisterIn
-from app.schemas.auth import LoginIn , PasswordChangeIn
 from app.config import settings
+from app.db.session import get_db
+from app.models.session import Session
+from app.models.user import User
+from app.schemas.auth import LoginIn, PasswordChangeIn, RegisterIn
+from app.services.security import (
+    DUMMY_PASSWORD_HASH,
+    hash_password,
+    verify_password,
+)
+from app.services.session import (
+    create_session,
+    delete_other_sessions,
+    delete_session,
+    get_optional_session,
+)
 
-from app.services.security import hash_password, verify_password, DUMMY_PASSWORD_HASH
-
-from app.services.session import create_session, delete_session, get_optional_session, delete_other_sessions
 
 async def get_optional_user(
     session: Session | None = Depends(get_optional_session),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
-
     if session is None:
         return None
 
-    stmt = select(User).where(
-        User.id == session.user_id
-    )
+    stmt = select(User).where(User.id == session.user_id)
 
     result = await db.execute(stmt)
 
     return result.scalar_one_or_none()
 
 
-async def get_current_user(user: User | None = Depends(get_optional_user)) -> User:
+async def get_current_user(
+    user: User | None = Depends(get_optional_user),
+) -> User:
     if user is None:
         raise HTTPException(
             status_code=401,
-            detail={"code": "unauthenticated", "message": "Authentication required"}
+            detail={
+                "code": "unauthenticated",
+                "message": "Authentication required",
+            },
         )
+
     return user
+
 
 async def require_admin(
     user: User = Depends(get_current_user),
@@ -54,23 +60,31 @@ async def require_admin(
         detail={
             "code": "forbidden",
             "message": "Admin access required",
-          }
+        },
     )
 
 
 async def register_user(
-        db: AsyncSession, 
-        data : RegisterIn, 
-)->tuple[User, str]:
-    stmt = select(User).where((User.username == data.username) | (User.email == data.email) )
-    result =await  db.execute(stmt)
+    db: AsyncSession,
+    data: RegisterIn,
+) -> tuple[User, str]:
+    stmt = select(User).where(
+        (User.username == data.username)
+        | (User.email == data.email)
+    )
+
+    result = await db.execute(stmt)
     users = result.scalars().all()
+
     fields = {}
-    for user in users :
-        if user.email == data.email :
+
+    for user in users:
+        if user.email == data.email:
             fields["email"] = "Email already registered"
-        if user.username == data.username :
+
+        if user.username == data.username:
             fields["username"] = "Username already taken"
+
     if fields:
         raise HTTPException(
             status_code=409,
@@ -80,23 +94,31 @@ async def register_user(
                 "fields": fields,
             },
         )
+
     role = (
         "admin"
-        if str(data.email).lower() == settings.INITIAL_ADMIN_EMAIL.lower()
+        if (
+            settings.INITIAL_ADMIN_EMAIL
+            and str(data.email).lower()
+            == settings.INITIAL_ADMIN_EMAIL.lower()
+        )
         else "user"
     )
+
     hashed_password = hash_password(data.password)
 
     user = User(
-        email = data.email,
-        username = data.username,
-        password_hash = hashed_password,
-        role = role,
+        email=data.email,
+        username=data.username,
+        password_hash=hashed_password,
+        role=role,
     )
+
     db.add(user)
     await db.flush()
 
     raw_token = await create_session(db, user.id)
+
     return user, raw_token
 
 
@@ -104,11 +126,9 @@ async def login_user(
     db: AsyncSession,
     data: LoginIn,
 ) -> tuple[User, str]:
-
     stmt = select(User).where(User.email == data.email)
 
     result = await db.execute(stmt)
-
     user = result.scalar_one_or_none()
 
     if user is not None and user.password_hash is not None:
@@ -116,7 +136,10 @@ async def login_user(
     else:
         password_hash = DUMMY_PASSWORD_HASH
 
-    password_ok = verify_password(data.password, password_hash)
+    password_ok = verify_password(
+        data.password,
+        password_hash,
+    )
 
     if (
         user is None
@@ -129,7 +152,7 @@ async def login_user(
                 "code": "invalid_credentials",
                 "message": "Invalid email or password",
                 "fields": {
-                    "oauth_hint": "true"
+                    "oauth_hint": "true",
                 },
             },
         )
@@ -137,6 +160,7 @@ async def login_user(
     raw_token = await create_session(db, user.id)
 
     return user, raw_token
+
 
 async def logout_user(
     db: AsyncSession,
@@ -164,7 +188,6 @@ async def change_password(
     current_session: Session,
     data: PasswordChangeIn,
 ) -> None:
-
     password_ok = (
         user.password_hash is not None
         and verify_password(

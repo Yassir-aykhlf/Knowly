@@ -1,31 +1,31 @@
-from app.models.session import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select
-import uuid
 import secrets
+import uuid
 from datetime import datetime, timedelta
-from app.db.session import get_db
-from app.config import settings
-from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException, Request, Response
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
+from app.db.session import get_db
+from app.models.session import Session
 
-if TYPE_CHECKING :
-    from app.models.user import User
 
 SESSION_COOKIE_NAME = "knowly_session"
 
 
-async def create_session(db: AsyncSession, user_id: uuid.UUID) -> str:
+async def create_session(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> str:
     token = secrets.token_urlsafe(32)
-
     hashed_token = Session.hash_token(token)
 
     session = Session(
         user_id=user_id,
         token_hash=hashed_token,
-        expires_at=datetime.utcnow() + timedelta(days=settings.SESSION_LIFETIME_DAYS),
+        expires_at=datetime.utcnow()
+        + timedelta(days=settings.SESSION_LIFETIME_DAYS),
     )
 
     db.add(session)
@@ -33,9 +33,14 @@ async def create_session(db: AsyncSession, user_id: uuid.UUID) -> str:
 
     return token
 
-async def delete_session(db: AsyncSession, session: Session)-> None:
+
+async def delete_session(
+    db: AsyncSession,
+    session: Session,
+) -> None:
     await db.delete(session)
     await db.flush()
+
 
 async def delete_other_sessions(
     db: AsyncSession,
@@ -48,9 +53,12 @@ async def delete_other_sessions(
     )
 
     await db.execute(stmt)
-    
 
-def set_session_cookie(response: Response, raw_token: str) -> None:
+
+def set_session_cookie(
+    response: Response,
+    raw_token: str,
+) -> None:
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=raw_token,
@@ -61,11 +69,11 @@ def set_session_cookie(response: Response, raw_token: str) -> None:
         path="/",
     )
 
+
 async def get_optional_session(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> Session | None:
-
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
 
     if raw_token is None:
@@ -85,14 +93,15 @@ async def get_optional_session(
 
     if datetime.utcnow() >= session.expires_at:
         await delete_session(db, session)
+        await db.commit()
         return None
 
     return session
 
+
 async def get_current_session(
     session: Session | None = Depends(get_optional_session),
 ) -> Session:
-
     if session is None:
         raise HTTPException(
             status_code=401,
@@ -103,4 +112,3 @@ async def get_current_session(
         )
 
     return session
-
