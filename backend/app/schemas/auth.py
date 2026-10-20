@@ -64,3 +64,8 @@ class PasswordChangeIn(BaseModel):
 class AccountDeleteIn(BaseModel):
     password: str | None = None
     confirm: str | None = None
+
+
+
+class GoogleLinkIn(BaseModel):
+    password: str

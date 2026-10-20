@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { USERNAME_RE, validatePassword } from '../lib/validation'
+import GoogleButton from '../components/GoogleButton'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -182,6 +183,15 @@ export default function RegisterPage() {
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-500">OR</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <GoogleButton />
+
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{' '}
