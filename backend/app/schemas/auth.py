@@ -58,3 +58,9 @@ class PasswordChangeIn(BaseModel):
             )
 
         return value
+
+
+
+class AccountDeleteIn(BaseModel):
+    password: str | None = None
+    confirm: str | None = None
