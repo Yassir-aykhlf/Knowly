@@ -37,5 +37,5 @@ class Session(Base):
         return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
     def set_token(self, raw_token: str) -> None:
-        """Store the SHA-256 hash of a raw token (never the raw value)."""
         self.token_hash = self.hash_token(raw_token)
+

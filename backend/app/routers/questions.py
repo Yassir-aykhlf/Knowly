@@ -46,7 +46,7 @@ async def accept_answer(
                         "message": "Answer does not belong to this question"},
             )
 
-        if answer.status != "approved":
+        if answer.moderation_status != "approved":
             raise HTTPException(
                 status_code=400,
                 detail={"code": "invalid_answer",

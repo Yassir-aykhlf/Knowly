@@ -1,14 +1,19 @@
 from passlib.context import CryptContext
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    bcrypt__rounds=12,
+    deprecated="auto",
+)
 
 
-def hash_password(plain: str) -> str:
-    return _pwd_context.hash(plain)
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    return pwd_context.verify(plain, hashed)
 
 
-DUMMY_PASSWORD_HASH = hash_password("knowly-dummy-login-password")
+DUMMY_PASSWORD_HASH = pwd_context.hash("dummy-password-123")

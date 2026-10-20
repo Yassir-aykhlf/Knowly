@@ -1,132 +1,61 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import or_, select
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.admin import is_initial_admin
 from app.db.session import get_db
-from app.models.user import User
-from app.schemas.auth import LoginIn
-from app.schemas.user import RegisterIn, UserMeOut
-from app.services.security import (
-    DUMMY_PASSWORD_HASH,
-    hash_password,
-    verify_password,
-)
-from app.services.session import (
-    SESSION_COOKIE_NAME,
-    clear_session_cookie,
-    create_session,
-    delete_session,
-    get_session,
-    set_session_cookie,
+from app.schemas.auth import LoginIn, RegisterIn
+from app.schemas.user import UserMeOut
+from app.services.auth import login_user, logout_user, register_user
+from app.services.session import SESSION_COOKIE_NAME, set_session_cookie
+
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
 
-
-@router.post("/register", status_code=201, response_model=UserMeOut)
+@router.post(
+    "/register",
+    response_model=UserMeOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def register(
-    payload: RegisterIn,
+    data: RegisterIn,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
-
-    result = await db.execute(
-        select(User).where(
-            or_(
-                User.email == payload.email,
-                User.username == payload.username,
-            )
-        )
-    )
-
-    fields = {}
-
-    for existing in result.scalars():
-        if existing.email == payload.email:
-            fields["email"] = "Email already registered"
-
-        if existing.username == payload.username:
-            fields["username"] = "Username already taken"
-
-    if fields:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "code": "conflict",
-                "message": "Account already exists",
-                "fields": fields,
-            },
-        )
-
-    user = User(
-        email=payload.email,
-        username=payload.username,
-        password_hash=hash_password(payload.password),
-        role="admin" if is_initial_admin(payload.email) else "user",
-    )
-
-    db.add(user)
-
-    await db.flush()
-
-    raw_token, _ = await create_session(db, user.id)
-
-    set_session_cookie(response, raw_token)
+    user, token = await register_user(db, data)
 
     await db.commit()
+
+    set_session_cookie(response, token)
 
     return UserMeOut.from_user(user)
 
 
-@router.post("/login", response_model=UserMeOut)
+@router.post(
+    "/login",
+    response_model=UserMeOut,
+    status_code=status.HTTP_200_OK,
+)
 async def login(
-    payload: LoginIn,
+    data: LoginIn,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> UserMeOut:
-    result = await db.execute(
-        select(User).where(User.email == payload.email)
-    )
-    user = result.scalar_one_or_none()
-
-    password_hash = (
-        user.password_hash
-        if user is not None and user.password_hash is not None
-        else DUMMY_PASSWORD_HASH
-    )
-
-    password_valid = verify_password(
-        payload.password,
-        password_hash,
-    )
-
-    if (
-        user is None
-        or user.password_hash is None
-        or not password_valid
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "code": "invalid_credentials",
-                "message": "Invalid email or password",
-                "fields": {
-                    "oauth_hint": "true",
-                },
-            },
-        )
-
-    raw_token, _ = await create_session(db, user.id)
-
-    set_session_cookie(response, raw_token)
+    user, token = await login_user(db, data)
 
     await db.commit()
+
+    set_session_cookie(response, token)
 
     return UserMeOut.from_user(user)
 
 
-@router.post("/logout", status_code=204)
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 async def logout(
     request: Request,
     response: Response,
@@ -134,11 +63,11 @@ async def logout(
 ) -> None:
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
 
-    session = await get_session(db, raw_token)
+    await logout_user(db, raw_token)
 
-    if session is not None:
-        await delete_session(db, session)
-        await db.commit()
+    await db.commit()
 
-    clear_session_cookie(response)
-
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/",
+    )

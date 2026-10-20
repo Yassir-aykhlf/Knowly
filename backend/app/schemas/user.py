@@ -1,32 +1,14 @@
-from datetime import datetime
 import uuid
-
-import re
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import User
 
 
-class AuthorOut(BaseModel):
-    id: uuid.UUID
-    username: str
-    avatar_url: str | None
-    is_anonymized: bool
-
-    @classmethod
-    def from_user(cls, user: User) -> "AuthorOut":
-        return cls(
-            id=user.id,
-            username=user.username,
-            avatar_url=user.avatar_path,
-            is_anonymized=user.is_anonymized,
-        )
-
-
 class UserMeOut(BaseModel):
     id: uuid.UUID
-    email: str | None
+    email: EmailStr | None
     username: str
     bio: str | None
     avatar_url: str | None
@@ -49,7 +31,8 @@ class UserMeOut(BaseModel):
             has_password=user.password_hash is not None,
         )
 
-class FriendshipOut(BaseModel):
+
+class FriendshipStateOut(BaseModel):
     state: str
     id: uuid.UUID | None
 
@@ -60,33 +43,31 @@ class UserProfileOut(BaseModel):
     bio: str | None
     avatar_url: str | None
     created_at: datetime
+    is_anonymized: bool
+
     question_count: int
     answer_count: int
     accepted_answer_count: int
+
+    friendship: FriendshipStateOut | None
+
+
+
+class AuthorOut(BaseModel):
+    id: uuid.UUID
+    username: str
+    avatar_url: str | None
     is_anonymized: bool
-    friendship: FriendshipOut | None
 
     @classmethod
-    def from_user(
-        cls,
-        user: User,
-        question_count: int,
-        answer_count: int,
-        accepted_answer_count: int,
-        friendship: FriendshipOut | None,
-    ) -> "UserProfileOut":
+    def from_user(cls, user: User) -> "AuthorOut":
         return cls(
             id=user.id,
             username=user.username,
-            bio=None if user.is_anonymized else user.bio,
-            avatar_url=None if user.is_anonymized else user.avatar_path,
-            created_at=user.created_at,
-            question_count=question_count,
-            answer_count=answer_count,
-            accepted_answer_count=accepted_answer_count,
+            avatar_url=user.avatar_path,
             is_anonymized=user.is_anonymized,
-            friendship=friendship,
         )
+
 
 
 class ProfileQuestionOut(BaseModel):
@@ -125,50 +106,32 @@ class ProfileAnswerPage(BaseModel):
     page: int
     limit: int
 
-class RegisterIn(BaseModel):
-    email: EmailStr
 
-    username: str = Field(
+class ProfileUpdateIn(BaseModel):
+    username: str | None = Field(
+        default=None,
         min_length=3,
         max_length=30,
         pattern=r"^[A-Za-z0-9_-]+$",
     )
 
-    password: str = Field(
-        min_length=8,
-        max_length=128,
+    bio: str | None = Field(
+        default=None,
+        max_length=500,
     )
 
-    @field_validator("password")
+    @field_validator("username")
     @classmethod
-    def _letter_and_digit(cls, v: str) -> str:
-        has_letter = re.search(r"[A-Za-z]", v)
-        has_digit = re.search(r"\d", v)
+    def reject_null_username(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("Username cannot be null")
 
-        if not has_letter or not has_digit:
-            raise ValueError(
-                "Password must contain at least one letter and one digit"
-            )
+        return value
 
-        return v
-    
-class PasswordChangeIn(BaseModel):
-    current_password: str
-
-    new_password: str = Field(
-        min_length=8,
-        max_length=128,
-    )
-
-    @field_validator("new_password")
+    @field_validator("bio", mode="before")
     @classmethod
-    def _letter_and_digit(cls, v: str) -> str:
-        has_letter = re.search(r"[A-Za-z]", v)
-        has_digit = re.search(r"\d", v)
+    def normalize_bio(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            return value.strip() or None
 
-        if not has_letter or not has_digit:
-            raise ValueError(
-                "Password must contain at least one letter and one digit"
-            )
-
-        return v
+        return value

@@ -1,117 +1,206 @@
-from __future__ import annotations
-
 import io
 import logging
 import uuid
 from pathlib import Path
 
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from PIL import Image, ImageOps, UnidentifiedImageError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.models.user import User
 
 
-logger = logging.getLogger("knowly.avatar")
+logger = logging.getLogger(__name__)
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+JPEG_MAGIC = b"\xff\xd8\xff"
 
 
-def _validation_error(message: str) -> HTTPException:
+def invalid_avatar(message: str) -> HTTPException:
     return HTTPException(
         status_code=400,
         detail={
             "code": "validation_error",
             "message": "Invalid avatar",
-            "fields": {
-                "avatar": message,
-            },
+            "fields": {"avatar": message},
         },
     )
 
 
-def _has_supported_magic(raw: bytes) -> bool:
-    # PNG
-    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
-        return True
+def sniff_image(data: bytes) -> str | None:
+    if data.startswith(PNG_MAGIC):
+        return "PNG"
 
-    # JPEG
-    if raw.startswith(b"\xff\xd8\xff"):
-        return True
+    if data.startswith(JPEG_MAGIC):
+        return "JPEG"
 
-    # WebP = RIFF....WEBP
-    if len(raw) >= 12 and raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
-        return True
+    if (
+        len(data) >= 12
+        and data[:4] == b"RIFF"
+        and data[8:12] == b"WEBP"
+    ):
+        return "WEBP"
 
-    return False
+    return None
 
 
-def normalize_and_store_avatar(raw: bytes) -> str:
-    if not raw:
-        raise _validation_error("Avatar file is empty")
+def normalized_png(raw: bytes) -> bytes:
+    expected = sniff_image(raw)
 
-    if len(raw) > settings.AVATAR_MAX_BYTES:
-        raise _validation_error("Avatar must be 2 MB or smaller")
-
-    if not _has_supported_magic(raw):
-        raise _validation_error(
-            "Avatar must be a PNG, JPEG, or WebP image"
+    if expected is None:
+        raise invalid_avatar(
+            "File must be a PNG, JPEG or WebP image"
         )
 
     try:
-        with Image.open(io.BytesIO(raw)) as image:
-            if image.format not in {"PNG", "JPEG", "WEBP"}:
-                raise _validation_error(
-                    "Avatar must be a PNG, JPEG, or WebP image"
+        with Image.open(io.BytesIO(raw)) as img:
+            if img.format != expected:
+                raise invalid_avatar(
+                    "Image format does not match file signature"
                 )
 
-            # Force Pillow to actually decode the image.
-            image.load()
+            if img.width <= 0 or img.height <= 0:
+                raise invalid_avatar("Invalid image dimensions")
 
-            normalized = ImageOps.fit(
-                image.convert("RGB"),
+            if img.width * img.height > 16_000_000:
+                raise invalid_avatar("Image dimensions are too large")
+
+            img.load()
+
+            img = ImageOps.exif_transpose(img)
+
+            img = ImageOps.fit(
+                img.convert("RGB"),
                 (256, 256),
                 method=Image.Resampling.LANCZOS,
-                centering=(0.5, 0.5),
             )
+
+            output = io.BytesIO()
+            img.save(output, format="PNG")
+
+            return output.getvalue()
 
     except HTTPException:
         raise
 
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
-        raise _validation_error(
-            "Avatar is not a valid image"
-        ) from exc
-
-    avatar_dir = Path(settings.AVATAR_DIR)
-    avatar_dir.mkdir(parents=True, exist_ok=True)
-
-    filename = f"{uuid.uuid4().hex}.png"
-    destination = avatar_dir / filename
-
-    normalized.save(
-        destination,
-        format="PNG",
-        optimize=True,
-    )
-
-    return f"/avatars/{filename}"
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        SyntaxError,
+        Image.DecompressionBombError,
+    ) as exc:
+        raise invalid_avatar("Could not decode image") from exc
 
 
-def delete_avatar_file(avatar_path: str | None) -> None:
-    if not avatar_path:
+def avatar_directory() -> Path:
+    folder = Path(settings.AVATAR_DIR)
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def safe_remove_avatar(path: str | None) -> None:
+    if not path:
         return
 
-    filename = Path(avatar_path).name
+    if not path.startswith("/avatars/"):
+        logger.warning("Invalid avatar path: %s", path)
+        return
 
-    if not filename:
+    name = path.removeprefix("/avatars/")
+
+    try:
+        parsed = uuid.UUID(name.removesuffix(".png"))
+
+        if (
+            not name.endswith(".png")
+            or parsed.hex + ".png" != name
+        ):
+            raise ValueError("Invalid filename")
+
+    except ValueError:
+        logger.warning("Invalid avatar filename: %s", path)
         return
 
     try:
-        (Path(settings.AVATAR_DIR) / filename).unlink(
+        (Path(settings.AVATAR_DIR) / name).unlink(
             missing_ok=True
         )
     except OSError:
-        # Old-avatar cleanup must never make the request fail.
-        logger.warning(
-            "Failed to delete avatar file %s",
-            avatar_path,
-            exc_info=True,
+        logger.exception(
+            "Could not delete avatar: %s",
+            path,
         )
+
+
+async def upload_avatar(
+    db: AsyncSession,
+    user: User,
+    file: UploadFile,
+) -> User:
+
+    raw = await file.read(
+        settings.AVATAR_MAX_BYTES + 1
+    )
+
+    if not raw:
+        raise invalid_avatar("Image cannot be empty")
+
+    if len(raw) > settings.AVATAR_MAX_BYTES:
+        raise invalid_avatar(
+            "Image must be at most 2 MB"
+        )
+
+    png = normalized_png(raw)
+
+    folder = avatar_directory()
+    filename = uuid.uuid4().hex + ".png"
+    destination = folder / filename
+
+    old_path = user.avatar_path
+
+    try:
+        with destination.open("xb") as output:
+            output.write(png)
+
+        user.avatar_path = f"/avatars/{filename}"
+
+        await db.commit()
+
+    except Exception:
+        try:
+            await db.rollback()
+        finally:
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                logger.exception(
+                    "Could not clean up failed upload: %s",
+                    destination,
+                )
+        raise
+
+    safe_remove_avatar(old_path)
+
+    await db.refresh(user)
+
+    return user
+
+
+async def remove_avatar(
+    db: AsyncSession,
+    user: User,
+) -> User:
+
+    old_path = user.avatar_path
+
+    user.avatar_path = None
+
+    await db.commit()
+
+    safe_remove_avatar(old_path)
+
+    await db.refresh(user)
+
+    return user
