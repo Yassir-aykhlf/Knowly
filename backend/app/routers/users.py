@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.models.session import Session
 from app.models.user import User
-from app.schemas.auth import PasswordChangeIn
+from app.schemas.auth import AccountDeleteIn, PasswordChangeIn
 from app.schemas.user import (
     ProfileAnswerPage,
     ProfileQuestionPage,
@@ -19,7 +19,8 @@ from app.services.auth import (
 )
 from app.services.avatar import remove_avatar, upload_avatar
 from app.services.heartbeat import update_last_seen
-from app.services.session import get_current_session
+from app.services.session import get_current_session, SESSION_COOKIE_NAME
+from app.services.account import delete_account
 from app.services.user import (
     get_target_user,
     get_user_answers,
@@ -44,6 +45,24 @@ async def get_me(
     user: User = Depends(get_current_user),
 ) -> UserMeOut:
     return UserMeOut.from_user(user)
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_me(
+    data: AccountDeleteIn,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await delete_account(db, user, data)
+
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/",
+    )
 
 
 @router.put(
