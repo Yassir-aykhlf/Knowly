@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.auth import LoginIn, RegisterIn
+from app.schemas.auth import GoogleLinkIn, LoginIn, RegisterIn
 from app.schemas.user import UserMeOut
 from app.services.auth import login_user, logout_user, register_user
 from app.services.session import SESSION_COOKIE_NAME, set_session_cookie
@@ -22,6 +22,7 @@ from app.services.oauth import (
     google_authorization_url,
     google_identity,
     google_is_configured,
+    link_google_account,
     resolve_google_account,
     valid_google_state,
 )
@@ -216,3 +217,44 @@ async def google_signin_callback(
     )
 
     return response
+
+
+
+@router.post(
+    "/google/link",
+    response_model=UserMeOut,
+    status_code=status.HTTP_200_OK,
+)
+async def google_link(
+    data: GoogleLinkIn,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> UserMeOut:
+    user, token = await link_google_account(
+        db,
+        request.cookies.get(GOOGLE_LINK_COOKIE),
+        data.password,
+    )
+
+    set_session_cookie(response, token)
+
+    response.delete_cookie(
+        key=GOOGLE_LINK_COOKIE,
+        path="/",
+    )
+
+    return UserMeOut.from_user(user)
+
+
+@router.delete(
+    "/google/link",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def cancel_google_link(
+    response: Response,
+) -> None:
+    response.delete_cookie(
+        key=GOOGLE_LINK_COOKIE,
+        path="/",
+    )

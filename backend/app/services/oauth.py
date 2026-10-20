@@ -14,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.user import User
 from app.services.session import create_session
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
+
+from app.services.security import verify_password
 
 
 GOOGLE_STATE_COOKIE = "knowly_google_state"
@@ -267,8 +271,6 @@ async def resolve_google_account(
     subject: str,
     email: str,
 ) -> tuple[str, str | None]:
-    # Returning Google user: match the stable Google identity,
-    # not the email address.
     result = await db.execute(
         select(User).where(
             User.oauth_provider == "google",
@@ -287,8 +289,6 @@ async def resolve_google_account(
 
         return "signed_in", token
 
-    # No Google identity matched. Check whether this email
-    # already belongs to an existing Knowly account.
     result = await db.execute(
         select(User).where(User.email == email)
     )
@@ -304,7 +304,6 @@ async def resolve_google_account(
         ):
             return "conflict", None
 
-        # The owner must prove their password in A-14.
         return "link_required", None
 
     username = await unique_google_username(db, email)
@@ -335,3 +334,111 @@ async def resolve_google_account(
     await db.commit()
 
     return "signed_in", token
+
+
+
+async def link_google_account(
+    db: AsyncSession,
+    cookie_token: str | None,
+    password: str,
+) -> tuple[User, str]:
+    pending = (
+        verify_oauth_cookie(cookie_token, "google_link")
+        if cookie_token
+        else None
+    )
+
+    if pending is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "link_expired",
+                "message": "Google linking has expired. Please start again.",
+            },
+        )
+
+    email = pending.get("email")
+    subject = pending.get("sub")
+
+    if (
+        not isinstance(email, str)
+        or not email
+        or not isinstance(subject, str)
+        or not subject
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "link_expired",
+                "message": "Google linking has expired. Please start again.",
+            },
+        )
+
+    result = await db.execute(
+        select(User)
+        .where(User.email == email)
+        .with_for_update()
+    )
+    user = result.scalar_one_or_none()
+
+    if (
+        user is None
+        or user.is_anonymized
+        or user.password_hash is None
+        or user.oauth_provider is not None
+        or user.oauth_subject is not None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "link_invalid",
+                "message": "This account cannot be linked to Google.",
+            },
+        )
+
+    if not verify_password(password, user.password_hash):
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "invalid_credentials",
+                "message": "Incorrect password.",
+                "fields": {
+                    "password": "Incorrect password",
+                },
+            },
+        )
+
+    result = await db.execute(
+        select(User.id).where(
+            User.oauth_provider == "google",
+            User.oauth_subject == subject,
+        )
+    )
+
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "conflict",
+                "message": "This Google account is already linked.",
+            },
+        )
+
+    user.oauth_provider = "google"
+    user.oauth_subject = subject
+
+    try:
+        await db.flush()
+        token = await create_session(db, user.id)
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "conflict",
+                "message": "This Google account is already linked.",
+            },
+        )
+
+    return user, token
