@@ -19,7 +19,6 @@ from sqlalchemy import select, func, exists, update, delete
 from app.services.files import delete_attachments_for, delete_file
 from fastapi import HTTPException
 import logging
-from sqlalchemy import update
 
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -236,11 +235,13 @@ async def list_questions(
 @router.get("/{question_id}", response_model=QuestionOut)
 async def get_question_endpoint(
     question_id: UUID,
-    user: User | None = Depends(get_optional_user),
+    viewer: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
     """get (single question by id) request handler"""
-    question = await load_viewable_question(db=db, question_id=question_id, viewer=user)
+    question = await load_viewable_question(db=db, question_id=question_id, viewer=viewer)
+    """added loading the user from DB if it's not the viewer"""
+    user = viewer if viewer is not None and question.author_id == viewer.id else await db.get(User, question.author_id)
     return await build_question_out(db=db, question=question, user=user)
 
 
