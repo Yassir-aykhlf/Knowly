@@ -250,8 +250,8 @@ function QuestionForm({ id }: { id: string | undefined }) {
 	const atTagLimit = tags.length >= TAGS_MAX;
 
 	return (
-		<main className="mx-auto max-w-3xl space-y-8 px-4 py-8">
-			<h1>{isEdit ? 'Edit question' : 'Ask a question'}</h1>
+		<main className="mx-auto max-w-3xl space-y-8 px-10 py-8">
+			<h1 className="font-display text-heading font-bold tracking-[-0.025em] text-ink">{isEdit ? 'Edit question' : 'Ask a question'}</h1>
 
 			{isEdit && load.status === 'ready' && (
 				<ModerationBanner
@@ -264,9 +264,9 @@ function QuestionForm({ id }: { id: string | undefined }) {
 
 			<form onSubmit={handleSubmit} noValidate>
 				{/* Title */}
-				<div className="flex w-full break-words text-2xl font-semibold">
+				<div className="flex w-full flex-col gap-1 break-words">
 					<input
-						className='border border-gray-300 p-2 rounded'
+						className='ah-input text-title-sm font-semibold'
 						type="text"
 						value={title}
 						onChange={(e) => {
@@ -277,24 +277,24 @@ function QuestionForm({ id }: { id: string | undefined }) {
 						aria-invalid={titleError !== null}
 						aria-describedby={titleError ? 'title-error' : undefined}
 					/>
-					<p className="mr-auto">
+					<p className="text-xs text-ink-faint">
 						{title.trim().length} / {TITLE_MAX}
 					</p>
 					{titleError && (
-						<p id="title-error" className="field__error" role="alert">
+						<p id="title-error" className="text-xs text-red-600" role="alert">
 							{titleError}
 						</p>
 					)}
 				</div>
 
 				{/* Body with Write / Preview */}
-				<div className="field">
-					<div className="field__header">
-						<label htmlFor="question-body">Body</label>
-						<div role="group" aria-label="Body view">
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center justify-between">
+						<label htmlFor="question-body" className="text-body font-semibold text-ink">Body</label>
+						<div role="group" aria-label="Body view" className="flex gap-1 border-b border-line">
 							<button
 								type="button"
-								className={mode === 'write' ? 'tab tab--active' : 'tab'}
+								className={`ah-sort-tab ${mode === 'write' ? 'ah-sort-tab-active' : ''}`}
 								aria-pressed={mode === 'write'}
 								onClick={() => setMode('write')}
 							>
@@ -302,7 +302,7 @@ function QuestionForm({ id }: { id: string | undefined }) {
 							</button>
 							<button
 								type="button"
-								className={mode === 'preview' ? 'tab tab--active' : 'tab'}
+								className={`ah-sort-tab ${mode === 'preview' ? 'ah-sort-tab-active' : ''}`}
 								aria-pressed={mode === 'preview'}
 								onClick={() => setMode('preview')}
 							>
@@ -323,37 +323,39 @@ function QuestionForm({ id }: { id: string | undefined }) {
 							onBlur={() => setTouched((t) => ({ ...t, body: true }))}
 							aria-invalid={bodyError !== null}
 							aria-describedby={bodyError ? 'body-error' : undefined}
+							className="ah-textarea"
 						/>
 					) : (
-						<div className="ask-page__preview">
-							{body.trim() ? <MarkdownBody markdown={body} /> : <p>Nothing to preview yet.</p>}
+						<div className="min-h-[200px] rounded-card border border-line bg-canvas p-4">
+							{body.trim() ? <MarkdownBody markdown={body} /> : <p className="text-ink-faint">Nothing to preview yet.</p>}
 						</div>
 					)}
 
-					<p className="field__help">
+					<p className="text-xs text-ink-faint">
 						{body.trim().length} / {BODY_MAX}
 					</p>
 					{bodyError && (
-						<p id="body-error" className="field__error" role="alert">
+						<p id="body-error" className="text-xs text-red-600" role="alert">
 							{bodyError}
 						</p>
 					)}
 				</div>
 
 				{/* Tags */}
-				<div className="field">
-					<label htmlFor="question-tags">
+				<div className="flex flex-col gap-1">
+					<label htmlFor="question-tags" className="text-body font-semibold text-ink">
 						Tags ({tags.length}/{TAGS_MAX})
 					</label>
-					<div className="tag-input">
-						<ul className="tag-input__chips" aria-label="Added tags">
+					<div className="flex flex-wrap items-center gap-2 rounded-btn border border-line3 bg-surface px-3 py-2 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent">
+						<ul className="flex flex-wrap gap-2" aria-label="Added tags">
 							{tags.map((tag) => (
-								<li key={tag} className="chip">
+								<li key={tag} className="ah-tag flex items-center gap-1">
 									{tag}
 									<button
 										type="button"
 										aria-label={`Remove tag ${tag}`}
 										onClick={() => removeTag(tag)}
+										className="ml-1 text-ink-faint hover:text-ink"
 									>
 										×
 									</button>
@@ -370,10 +372,11 @@ function QuestionForm({ id }: { id: string | undefined }) {
 							onKeyDown={handleTagKeyDown}
 							aria-invalid={tagsError !== null}
 							aria-describedby={tagsError ? 'tags-error' : undefined}
+							className="flex-1 border-0 bg-transparent text-body text-ink placeholder:text-ink-dim focus:outline-none"
 						/>
 					</div>
 					{tagsError && (
-						<p id="tags-error" className="field__error" role="alert">
+						<p id="tags-error" className="text-xs text-red-600" role="alert">
 							{tagsError}
 						</p>
 					)}
@@ -384,13 +387,13 @@ function QuestionForm({ id }: { id: string | undefined }) {
 				<AttachmentList items={attachments} onDelete={handleRemoveAttachment} />
 
 				{formError && (
-					<p className="field__error" role="alert">
+					<p className="rounded-btn border border-red-200 bg-red-50 px-3 py-2 text-body-sm text-red-700" role="alert">
 						{formError}
 					</p>
 				)}
 
-				<div className="ask-page__actions">
-					<button type="submit" disabled={submitting}>
+				<div className="flex items-center gap-3">
+					<button type="submit" disabled={submitting} className="ah-btn-primary">
 						{submitting
 							? isEdit
 								? 'Saving…'
@@ -399,7 +402,7 @@ function QuestionForm({ id }: { id: string | undefined }) {
 								? 'Save changes'
 								: 'Post question'}
 					</button>
-					<Link to={isEdit ? `/questions/${id}` : '/home'}>Cancel</Link>
+					<Link to={isEdit ? `/questions/${id}` : '/home'} className="text-body text-ink-faint hover:text-ink">Cancel</Link>
 				</div>
 			</form>
 		</main>

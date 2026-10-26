@@ -91,15 +91,15 @@ export default function HomePage() {
 
 	function renderBody() {
 		if (state.status === 'loading') {
-			return <p role="status">Loading…</p>;
+			return <p role="status" className="px-10 py-6 text-body text-ink-faint">Loading…</p>;
 		}
 
 		if (state.status === 'error') {
 			return (
-				<div role="alert" className="home-page__error">
-					<p>Couldn&apos;t load questions.</p>
-					<p>{state.message}</p>
-					<button type="button" onClick={() => setAttempt((n) => n + 1)}>
+				<div role="alert" className="mx-auto max-w-[880px] px-10 py-8 text-sm">
+					<p className="mb-2 text-ink-muted">Couldn&apos;t load questions.</p>
+					<p className="mb-4 text-ink-faint">{state.message}</p>
+					<button type="button" onClick={() => setAttempt((n) => n + 1)} className="ah-btn-secondary">
 						Retry
 					</button>
 				</div>
@@ -111,9 +111,9 @@ export default function HomePage() {
 		if (total === 0) {
 			return (
 				<div className="mx-auto max-w-xl px-4 py-16 text-center">
-					<p>No questions here yet.</p>
-					<p>
-						Be the first to <Link to="/ask">ask a question</Link>.
+					<p className="text-body text-ink-faint">No questions here yet.</p>
+					<p className="text-body text-ink-faint">
+						Be the first to <Link to="/ask" className="ah-link">ask a question</Link>.
 					</p>
 				</div>
 			);
@@ -124,7 +124,7 @@ export default function HomePage() {
 		return (
 			<>
 				<div>
-					<ul className="mx-auto w-full max-w-[880px] px-4 pb-20 pt-[34px] sm:px-10">
+					<ul className="mx-auto w-full max-w-[880px] list-none px-10 pb-20 pt-[34px]">
 						{items.map((item) => (
 							<li key={item.id}>
 								<QuestionCard question={item} />
@@ -132,17 +132,17 @@ export default function HomePage() {
 						))}
 					</ul>
 
-					<nav className="mx-auto flex w-full max-w-[880px] items-center justify-center gap-4 px-4 pb-20 pt-[34px] sm:px-10">
+					<nav className="mx-auto flex w-full max-w-[880px] items-center justify-center gap-4 px-10 pb-20">
 						<button
 							type="button"
 							disabled={page <= 1}
 							onClick={() => govoteage(page - 1)}
-							className="inline-block w-fit h-fit shrink-0 cursor-pointer whitespace-nowrap rounded-[10px] bg-[var(--accent,#0d9488)] px-[18px] py-[11px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#0b7d72] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent,#0d9488)]"
+							className="ah-btn-primary"
 						>
 							Previous
 						</button>
 
-						<span className="text-[14.5px] font-medium">
+						<span className="text-body font-medium text-ink-faint">
 							Page {page} of {totalPages}
 						</span>
 
@@ -150,7 +150,7 @@ export default function HomePage() {
 							type="button"
 							disabled={page >= totalPages}
 							onClick={() => govoteage(page + 1)}
-							className="inline-block w-fit h-fit shrink-0 cursor-pointer whitespace-nowrap rounded-[10px] bg-[var(--accent,#0d9488)] px-[18px] py-[11px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#0b7d72] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent,#0d9488)]"
+							className="ah-btn-primary"
 						>
 							Next
 						</button>
@@ -161,24 +161,24 @@ export default function HomePage() {
 	}
 
 	return (
-		<main className="home-page">
-			<header className="mx-auto px-10 py-10 w-full max-w-[880px] sm:px-10">
-				<div className='relative flex flex-row gap-8 w-full'>
-					<div className='flex flex-col gap-4 flex-1'>
-						<h1 className="m-0 text-[32px] font-extrabold tracking-[-0.03em] text-[#1a201e]">
+		<main className="bg-canvas-main">
+			<header className="mx-auto w-full max-w-[880px] px-10 pb-0 pt-[34px]">
+				<div className='relative flex flex-row gap-8 w-full pb-[18px] items-end justify-between'>
+					<div className='flex flex-col gap-[5px] flex-1'>
+						<h1 className="m-0 font-display text-display font-bold tracking-[-0.03em] text-ink">
 							Questions
 						</h1>
 
 					</div>
 					<Link
 						to="/ask"
-						className="inline-block self-end w-fit h-fit shrink-0 whitespace-nowrap rounded-[10px] bg-[var(--accent,#0d9488)] px-[18px] py-[11px] text-[14.5px] font-semibold text-white no-underline transition-colors hover:bg-[#0b7d72]"
+						className="ah-btn-primary shrink-0 self-end whitespace-nowrap no-underline"
 					>
 						Ask a question
 					</Link>
 				</div>
 				<div
-					className="flex gap-1 border-b border-[#e7eae8]"
+					className="flex gap-1 border-b border-line"
 					role="group"
 					aria-label="Sort questions"
 				>
@@ -186,10 +186,7 @@ export default function HomePage() {
 						<button
 							key={s}
 							type="button"
-							className={`-mb-px cursor-pointer border-0 border-b-2 bg-transparent px-[13px] py-[9px] font-inherit text-sm transition-colors ${s === sort
-								? 'border-[var(--accent,#0d9488)] font-semibold text-[var(--accent,#0d9488)]'
-								: 'border-transparent font-medium text-[#7d8a85] hover:text-[#15302b]'
-								}`}
+							className={`ah-sort-tab ${s === sort ? 'ah-sort-tab-active' : ''}`}
 							aria-pressed={s === sort}
 							onClick={() => selectSort(s)}
 						>
@@ -201,6 +198,6 @@ export default function HomePage() {
 			</header>
 
 			{renderBody()}
-		</main >
+		</main>
 	);
 }

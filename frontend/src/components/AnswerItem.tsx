@@ -75,8 +75,8 @@ export default function AnswerItem({
 
   return (
     <article
-      className={`flex gap-4 rounded-lg border p-4 ${
-        isAccepted ? 'border-green-300 bg-green-50/50' : 'border-slate-200'
+      className={`flex gap-[18px] rounded-card border p-5 ${
+        isAccepted ? 'border-accent bg-[rgba(13,148,136,0.04)]' : 'border-line'
       }`}
     >
       <VoteArrows
@@ -97,28 +97,28 @@ export default function AnswerItem({
           />
         )}
 
-        <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-2">
           {canAccept ? (
             <button
               type="button"
               onClick={() => void toggleAccept()}
               disabled={busy}
               aria-pressed={isAccepted}
-              className={`rounded-full border px-2.5 py-0.5 disabled:opacity-50 ${
+              className={`disabled:opacity-50 ${
                 isAccepted
-                  ? 'border-green-600 bg-green-600 text-white'
-                  : 'border-slate-300 text-slate-600 hover:border-green-600 hover:text-green-700'
+                  ? 'ah-badge-accepted'
+                  : 'inline-flex cursor-pointer items-center rounded-badge border border-line3 px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-ink-faint hover:border-accent hover:text-accent'
               }`}
             >
               {isAccepted ? '✓ Accepted' : 'Accept'}
             </button>
           ) : (
             isAccepted && (
-              <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-green-800">✓ Accepted</span>
+              <span className="ah-badge-accepted">✓ Accepted</span>
             )
           )}
           {answer.is_ai_assisted && (
-            <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-violet-800">AI-assisted</span>
+            <span className="ah-badge-ai">AI-assisted</span>
           )}
         </div>
 
@@ -140,17 +140,17 @@ export default function AnswerItem({
         <AttachmentList items={answer.attachments} />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-3 text-sm">
+          <div className="flex gap-3 text-body-sm">
             {isMine && !editing && (
               <>
-                <button type="button" onClick={() => setEditing(true)} className="text-slate-500 hover:text-accent">
+                <button type="button" onClick={() => setEditing(true)} className="text-ink-faint hover:text-accent">
                   Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => void remove()}
                   disabled={busy}
-                  className="text-slate-500 hover:text-red-600"
+                  className="text-ink-faint hover:text-red-600"
                 >
                   Delete
                 </button>

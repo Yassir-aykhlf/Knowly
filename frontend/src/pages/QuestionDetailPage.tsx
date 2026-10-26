@@ -68,21 +68,21 @@ export default function QuestionDetailPage() {
   }
 
   if (loading) {
-    return <div className="px-4 py-10 text-center text-sm text-slate-500">Loading…</div>
+    return <div className="px-10 py-10 text-center text-body text-ink-faint">Loading…</div>
   }
 
   if (notFound) {
     return (
-      <div className="px-4 py-10 text-center text-sm text-slate-600">
-        <p className="mb-3">This question doesn't exist, or you can't see it.</p>
-        <Link to="/home" className="text-accent hover:underline">Back to questions</Link>
+      <div className="px-10 py-10 text-center text-body text-ink-faint">
+        <p className="mb-3">This question doesn&apos;t exist, or you can&apos;t see it.</p>
+        <Link to="/home" className="ah-link">Back to questions</Link>
       </div>
     )
   }
 
   if (!question) {
     return (
-      <div className="px-4 py-10 text-center text-sm text-red-700">
+      <div className="px-10 py-10 text-center text-body text-red-700">
         <p className="mb-3">{error ?? 'Something went wrong.'}</p>
         <button
           type="button"
@@ -90,7 +90,7 @@ export default function QuestionDetailPage() {
             setLoading(true)
             void load()
           }}
-          className="rounded-md border px-3 py-1"
+          className="ah-btn-secondary"
         >
           Retry
         </button>
@@ -103,17 +103,17 @@ export default function QuestionDetailPage() {
   const answerCount = question.answers.length
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
+    <div className="mx-auto max-w-3xl space-y-8 px-10 py-8">
       {error && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          Couldn't refresh: {error}{' '}
+        <p className="rounded-btn border border-red-200 bg-red-50 px-3 py-2 text-body-sm text-red-700">
+          Couldn’t refresh: {error}{' '}
           <button type="button" onClick={() => void load()} className="underline">
             Retry
           </button>
         </p>
       )}
 
-      <article className="flex gap-4">
+      <article className="flex gap-[18px]">
         <VoteArrows
           targetType="question"
           targetId={question.id}
@@ -132,13 +132,13 @@ export default function QuestionDetailPage() {
             />
           )}
 
-          <h1 className="break-words text-2xl font-semibold">{question.title}</h1>
+          <h1 className="break-words font-display text-heading font-bold tracking-[-0.025em] text-ink">{question.title}</h1>
           <MarkdownBody markdown={question.body} />
 
           {question.tags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {question.tags.map((tag) => (
-                <li key={tag} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700">
+                <li key={tag} className="ah-tag-tall">
                   {tag}
                 </li>
               ))}
@@ -148,16 +148,16 @@ export default function QuestionDetailPage() {
           <AttachmentList items={question.attachments} />
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-3 text-sm">
+            <div className="flex gap-3 text-body-sm">
               {isAsker && (
                 <>
-                  <Link to={`/questions/${question.id}/edit`} className="text-slate-500 hover:text-accent">
+                  <Link to={`/questions/${question.id}/edit`} className="text-ink-faint hover:text-accent">
                     Edit
                   </Link>
                   <button
                     type="button"
                     onClick={() => void deleteQuestion()}
-                    className="text-slate-500 hover:text-red-600"
+                    className="text-ink-faint hover:text-red-600"
                   >
                     Delete
                   </button>
@@ -182,7 +182,7 @@ export default function QuestionDetailPage() {
       </article>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-display text-title font-semibold tracking-[-0.02em] text-ink">
           {answerCount} {answerCount === 1 ? 'answer' : 'answers'}
         </h2>
         {/* rendered in server order: accepted first, then votes, then oldest. Never re-sort here. */}

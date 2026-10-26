@@ -53,10 +53,9 @@ export default function VoteArrows({
   }
 
   function arrowClass(active: boolean) {
-    const base = 'flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors'
-    if (disabled) return `${base} cursor-not-allowed text-slate-300`
-    if (active) return `${base} text-accent hover:bg-slate-100`
-    return `${base} text-slate-400 hover:bg-slate-100 hover:text-slate-700`
+    if (disabled) return 'ah-vote-btn cursor-not-allowed opacity-40'
+    if (active) return 'ah-vote-btn ah-vote-btn-active'
+    return 'ah-vote-btn hover:border-accent hover:text-accent'
   }
 
   return (
@@ -74,7 +73,7 @@ export default function VoteArrows({
       >
         ▲
       </button>
-      <span className="text-sm font-semibold tabular-nums text-slate-700">
+      <span className="text-[18px] font-bold tabular-nums text-ink">
         {current.vote_total}
       </span>
       <button

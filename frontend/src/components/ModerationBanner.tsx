@@ -6,8 +6,14 @@ type Props = {
 }
 
 const STYLES = {
-  pending: 'border-amber-300 bg-amber-50 text-amber-800',
-  rejected: 'border-red-300 bg-red-50 text-red-800',
+  pending: {
+    full: 'ah-banner-pending',
+    compact: 'ah-banner-pending-compact',
+  },
+  rejected: {
+    full: 'ah-banner-rejected',
+    compact: 'ah-banner-rejected-compact',
+  },
 }
 
 export default function ModerationBanner({ status, note, kind, compact = false }: Props) {
@@ -18,10 +24,12 @@ export default function ModerationBanner({ status, note, kind, compact = false }
       ? `Your ${kind} is held for review. Only you can see it.`
       : `Your ${kind} was rejected by a moderator.`
 
+  const cls = STYLES[status][compact ? 'compact' : 'full']
+
   return (
     <div
       role="status"
-      className={`rounded-md border ${STYLES[status]} ${compact ? 'px-2 py-1 text-xs' : 'px-4 py-3 text-sm'}`}
+      className={cls}
     >
       <p className="font-medium">{message}</p>
       {note && <p className="mt-1">Reason: {note}</p>}
