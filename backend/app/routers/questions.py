@@ -212,7 +212,7 @@ async def list_questions(
         )
         answer_counts = dict(rows.all())
 
-    vtotals = await vote_totals(db=db, target_type="questions", ids=ids)
+    vtotals = await vote_totals(db=db, target_type="question", ids=ids)
 
     items = [
         QuestionListItem(

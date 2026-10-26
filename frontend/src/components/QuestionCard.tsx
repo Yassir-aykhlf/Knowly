@@ -38,24 +38,47 @@ export default function QuestionCard({ question }: Props) {
 					</span>
 				</li>
 
-				<li
-					className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
-							? 'rounded-[7px] border border-accent px-[7px] py-[3px] text-accent'
+				{answer_count > 2 ?
+					<li
+						className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
+							? 'rounded-[7px] border  border-accent px-[7px] py-[3px] text-accent'
 							: 'text-ink-faint'
-						}`}
-					title={has_accepted_answer ? 'Has an accepted answer' : undefined}
-				>
-					<span className="text-sm font-bold">
-						{has_accepted_answer && <span aria-hidden="true">✓ </span>}
-						{answer_count}
-					</span>
-					<span className="text-[11px] opacity-80">
-						{answer_count === 1 ? 'answer' : 'answers'}
-					</span>
-					{has_accepted_answer && (
-						<span className="sr-only">Has an accepted answer</span>
-					)}
-				</li>
+							}`}
+						title={has_accepted_answer ? 'Has an accepted answer' : undefined}
+					>
+						<span className="text-sm font-bold">
+							{has_accepted_answer && <span aria-hidden="true">✓ </span>}
+							{answer_count}
+						</span>
+						<span className="text-[11px] opacity-80">
+							{answer_count === 1 ? 'answer' : 'answers'}
+						</span>
+						{has_accepted_answer ?
+							(<span className="sr-only">Has an accepted answer</span>) :
+							(<span className="sr-only">Has no accepted answer yet</span>)
+						}
+					</li>
+					:
+					<li
+						className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
+							? 'rounded-[7px] border  border-gray px-[7px] py-[3px] text-gray'
+							: 'text-ink-faint'
+							}`}
+						title={has_accepted_answer ? 'Has an accepted answer' : undefined}
+					>
+						<span className="text-sm font-bold">
+							{has_accepted_answer && <span aria-hidden="true">✓ </span>}
+							{answer_count}
+						</span>
+						<span className="text-[11px] opacity-80">
+							{answer_count === 1 ? 'answer' : 'answers'}
+						</span>
+						{has_accepted_answer ?
+							(<span className="sr-only">Has an accepted answer</span>) :
+							(<span className="sr-only">Has no accepted answer yet</span>)
+						}
+					</li>
+				}
 
 				<li className="text-right text-[11px] text-ink-ghost">
 					{plural(view_count, 'view')}
