@@ -56,7 +56,13 @@ async def build_question_out(
     comments = result.scalars().all()
 
     buckets: dict[tuple[str, UUID], list[CommentOut]] = defaultdict(list)
-    for c in comments:
+
+    commentsOut = [
+        CommentOut.from_comment(b)
+        for b in comments
+    ]
+
+    for c in commentsOut:
         buckets[(c.parent_type, c.parent_id)].append(c)
 
     # 5. Scores, viewer votes, attachments: one call for the question,
