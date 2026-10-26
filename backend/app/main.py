@@ -13,7 +13,7 @@ from app.services.admin import bootstrap_initial_admin
 from app.routers import answers, auth, comments, friends, health, messages, notifications, users, questions, votes
 from app.schemas.common import error_body
 from app.routers import files
-from app.routers import ai, moderation
+from app.routers import ai, moderation, search
 
 
 logger = logging.getLogger("knowly")
@@ -117,3 +117,4 @@ app.include_router(votes.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(moderation.router, prefix="/api")
+app.include_router(search.router, prefix="/api")
