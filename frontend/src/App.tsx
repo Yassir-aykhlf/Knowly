@@ -28,39 +28,40 @@ import NotificationsPage from './pages/NotificationsPage'
 import ModerationPage from './pages/ModerationPage'
 
 export default function App() {
-  return (
-    <Routes>
-      {/* Public routes */}
-      <Route element={<PublicLayout />}>
-        <Route index element={<LandingPage />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
-        <Route path="auth/link" element={<AuthLinkPage />} />
-        <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="terms-of-service" element={<TermsOfServicePage />} />
-        <Route path="403" element={<ForbiddenPage />} />
-        <Route path="404" element={<NotFoundPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
+	return (
+		<Routes>
+			{/* Public routes */}
+			<Route element={<PublicLayout />}>
+				<Route index element={<LandingPage />} />
+				<Route path="login" element={<LoginPage />} />
+				<Route path="register" element={<RegisterPage />} />
+				<Route path="auth/link" element={<AuthLinkPage />} />
+				<Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+				<Route path="terms-of-service" element={<TermsOfServicePage />} />
+				<Route path="403" element={<ForbiddenPage />} />
+				<Route path="404" element={<NotFoundPage />} />
+				<Route path="*" element={<NotFoundPage />} />
+			</Route>
 
-      {/* Authenticated routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path="home" element={<HomePage />} />
-          <Route path="questions/:id" element={<QuestionDetailPage />} />
-          <Route path="ask" element={<AskPage />} />
-          <Route path="users/:id" element={<ProfilePage />} />
-          <Route path="friends" element={<FriendsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="messages" element={<MessagesPage />} />
-          <Route path="messages/:userId" element={<ConversationPage />} />
-          <Route path="ai" element={<AiPage />} />
-          <Route path="ai/:conversationId" element={<AiConversationPage />} />
-          <Route path="search" element={<SearchPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="admin/moderation" element={<ModerationPage />} />
-        </Route>
-      </Route>
-    </Routes>
-  )
+			{/* Authenticated routes */}
+			<Route element={<ProtectedRoute />}>
+				<Route element={<AppLayout />}>
+					<Route path="home" element={<HomePage />} />
+					<Route path="questions/:id" element={<QuestionDetailPage />} />
+					<Route path="questions/:id/edit" element={<AskPage />} />
+					<Route path="ask" element={<AskPage />} />
+					<Route path="users/:id" element={<ProfilePage />} />
+					<Route path="friends" element={<FriendsPage />} />
+					<Route path="settings" element={<SettingsPage />} />
+					<Route path="messages" element={<MessagesPage />} />
+					<Route path="messages/:userId" element={<ConversationPage />} />
+					<Route path="ai" element={<AiPage />} />
+					<Route path="ai/:conversationId" element={<AiConversationPage />} />
+					<Route path="search" element={<SearchPage />} />
+					<Route path="notifications" element={<NotificationsPage />} />
+					<Route path="admin/moderation" element={<ModerationPage />} />
+				</Route>
+			</Route>
+		</Routes>
+	)
 }

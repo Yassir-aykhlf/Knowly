@@ -39,9 +39,9 @@ export default function AnswerComposer({ questionId, prefill, onPosted }: Props)
 
   return (
     <section className="space-y-2">
-      <h2 className="text-lg font-semibold">Your answer</h2>
+      <h2 className="font-display text-title font-semibold tracking-[-0.02em] text-ink">Your answer</h2>
       {prefill?.isAiAssisted && (
-        <p className="text-xs text-violet-700">
+        <p className="text-xs text-ai">
           Drafted with the AI assistant. This answer will be marked AI-assisted.
         </p>
       )}

@@ -71,11 +71,11 @@ export default function EditBox({
         }}
         onBlur={() => setTouched(true)}
         aria-invalid={shownError !== null}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+        className="ah-input resize-none font-mono text-body-md"
       />
       <div className="flex items-center justify-between gap-3 text-xs">
         <span className="text-red-600">{shownError}</span>
-        <span className={`tabular-nums ${length > max ? 'text-red-600' : 'text-slate-400'}`}>
+        <span className={`tabular-nums ${length > max ? 'text-red-600' : 'text-ink-faint'}`}>
           {length.toLocaleString()} / {max.toLocaleString()}
         </span>
       </div>
@@ -83,7 +83,7 @@ export default function EditBox({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-dark disabled:opacity-50"
+          className="ah-btn-primary"
         >
           {busy ? 'Saving…' : submitLabel}
         </button>
@@ -92,7 +92,7 @@ export default function EditBox({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-md border px-3 py-1.5 text-sm"
+            className="ah-btn-secondary"
           >
             Cancel
           </button>

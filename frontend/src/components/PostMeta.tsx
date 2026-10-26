@@ -15,12 +15,12 @@ export default function PostMeta({ author, createdAt, updatedAt, compact = false
   const edited = new Date(updatedAt).getTime() > new Date(createdAt).getTime()
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+    <span className="inline-flex items-center gap-1.5 text-meta text-ink-faint">
       {!compact && <Avatar user={author} size={20} />}
       {author.is_anonymized ? (
         <span>{author.username}</span>
       ) : (
-        <Link to={`/users/${author.id}`} className="font-medium text-slate-700 hover:underline">
+        <Link to={`/users/${author.id}`} className="font-medium text-[#46544F] hover:underline">
           {author.username}
         </Link>
       )}

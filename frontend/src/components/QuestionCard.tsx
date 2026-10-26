@@ -26,22 +26,22 @@ export default function QuestionCard({ question }: Props) {
 	} = question;
 
 	return (
-		<article className="flex gap-[18px] border-b border-[#eef1ef] px-[6px] py-5 text-left transition-colors hover:bg-[#fbfcfb]">
+		<article className="flex gap-[18px] border-b border-line4 px-[6px] py-5 text-left transition-colors hover:bg-surface-raised">
 			{/* Stats */}
 			<ul className="m-0 flex w-[62px] shrink-0 list-none flex-col items-end gap-[10px] p-0 pt-[2px]">
 				<li className="flex flex-col items-end leading-[1.1]">
-					<span className="text-base font-bold text-[#1a201e]">
+					<span className="text-[16px] font-bold text-ink">
 						{vote_total}
 					</span>
-					<span className="text-[11px] text-[#9aa6a1]">
+					<span className="text-[11px] text-ink-ghost">
 						{vote_total === 1 ? 'vote' : 'votes'}
 					</span>
 				</li>
 
 				<li
 					className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
-							? 'rounded-[7px] border border-[var(--accent,#0d9488)] px-[7px] py-[3px] text-[var(--accent,#0d9488)]'
-							: 'text-[#7d8a85]'
+							? 'rounded-[7px] border border-accent px-[7px] py-[3px] text-accent'
+							: 'text-ink-faint'
 						}`}
 					title={has_accepted_answer ? 'Has an accepted answer' : undefined}
 				>
@@ -57,23 +57,23 @@ export default function QuestionCard({ question }: Props) {
 					)}
 				</li>
 
-				<li className="text-right text-[11px] text-[#9aa6a1]">
+				<li className="text-right text-[11px] text-ink-ghost">
 					{plural(view_count, 'view')}
 				</li>
 			</ul>
 
 			{/* Main content */}
 			<div className="min-w-0 flex-1">
-				<h2 className="mb-[6px] mt-0 text-[17px] font-semibold leading-[1.35] tracking-[-0.01em] text-[#15302b]">
+				<h2 className="mb-[6px] mt-0 text-title-sm font-semibold text-ink">
 					<Link
 						to={`/questions/${id}`}
-						className="rounded-sm text-inherit no-underline hover:text-[var(--accent,#0d9488)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent,#0d9488)]"
+						className="rounded-sm text-inherit no-underline hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 					>
 						{title}
 					</Link>
 				</h2>
 
-				<p className="mb-3 mt-0 line-clamp-2 text-sm leading-[1.55] text-[#5a6863]">
+				<p className="mb-3 mt-0 line-clamp-2 text-body leading-[1.55] text-ink-muted">
 					{excerpt}
 				</p>
 
@@ -86,7 +86,7 @@ export default function QuestionCard({ question }: Props) {
 							{tags.map((tag) => (
 								<li
 									key={tag}
-									className="rounded-[6px] bg-[#eef2f0] px-[9px] py-[3px] font-mono text-[11.5px] text-[#46544f]"
+									className="ah-tag"
 								>
 									{tag}
 								</li>
@@ -94,12 +94,12 @@ export default function QuestionCard({ question }: Props) {
 						</ul>
 					)}
 
-					<div className="ml-auto flex flex-wrap items-center gap-2 text-[12.5px] text-[#8a958f]">
+					<div className="ml-auto flex flex-wrap items-center gap-2 text-[12.5px] text-ink-faint">
 						<span className="inline-flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full [&>*]:size-full [&_img]:object-cover">
 							<Avatar user={author} />
 						</span>
 
-						<span className="font-medium text-[#46544f]">
+						<span className="font-medium text-[#46544F]">
 							{author.username}
 						</span>
 

@@ -1,3 +1,6 @@
+/* ─── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,7 +10,7 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-canvas font-sans text-ink antialiased;
+    @apply bg-canvas-main font-sans text-ink antialiased;
   }
   :focus-visible {
     outline: 2px solid #0d9488;
@@ -16,36 +19,113 @@
 }
 
 @layer components {
+  /* ── Cards ─────────────────────────────────────────────────────────────── */
   .ah-card {
     @apply rounded-card border border-line bg-surface;
   }
+  /* Answer card – accepted variant */
+  .ah-card-accepted {
+    @apply rounded-card border border-accent bg-accent-tint/30;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
   .ah-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-btn px-4 py-2.5 text-body font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   .ah-btn-primary {
     @apply ah-btn bg-accent text-white hover:bg-accent-dark;
   }
   .ah-btn-secondary {
-    @apply ah-btn border border-[#d8dddb] bg-surface text-ink hover:bg-[#eef1ef];
+    @apply ah-btn border border-line3 bg-surface text-ink hover:bg-canvas;
+  }
+  .ah-btn-ghost {
+    @apply ah-btn text-ink-faint hover:text-ink;
   }
   .ah-btn-ai {
-    @apply ah-btn border border-[#d9dcf3] bg-surface text-ai hover:bg-ai-tint;
+    @apply ah-btn border border-ai-tint bg-surface text-ai hover:bg-ai-tint;
   }
+  /* Vote arrow buttons */
+  .ah-vote-btn {
+    @apply flex h-[38px] w-[38px] items-center justify-center rounded-btn border border-line3 bg-surface text-lg transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .ah-vote-btn-active {
+    @apply border-accent bg-accent-tint text-accent;
+  }
+
+  /* ── Inputs ──────────────────────────────────────────────────────────── */
   .ah-input {
-    @apply w-full rounded-[10px] border border-[#d8dddb] bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-[#aab3ae] focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+    @apply w-full rounded-btn border border-line3 bg-surface px-3 py-2.5 text-body text-ink placeholder:text-ink-dim focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
   }
+  .ah-textarea {
+    @apply ah-input resize-none font-mono text-body-md;
+  }
+
+  /* ── Tags / Chips ─────────────────────────────────────────────────────── */
   .ah-tag {
-    @apply inline-flex rounded-md bg-[#eef2f0] px-2.5 py-1 font-mono text-[11.5px] leading-none text-[#46544f];
+    @apply inline-flex rounded-tag bg-[#EEF2F0] px-[9px] py-[3px] font-mono text-tag leading-none text-[#46544F];
   }
+  /* Tag used inside QuestionDetailPage body */
+  .ah-tag-tall {
+    @apply inline-flex rounded-tag bg-[#EEF2F0] px-[10px] py-[4px] font-mono text-tag text-[#46544F];
+  }
+
+  /* ── Badge pills (accepted / ai-assisted) ─────────────────────────────── */
+  .ah-badge-accepted {
+    @apply inline-flex items-center gap-1 rounded-badge bg-accent px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-white;
+  }
+  .ah-badge-ai {
+    @apply inline-flex items-center gap-1 rounded-badge border border-ai-tint bg-ai-tint px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-ai;
+  }
+
+  /* ── Nav sidebar items ─────────────────────────────────────────────────── */
+  .ah-nav-item {
+    @apply flex w-full items-center gap-[9px] rounded-btn px-[11px] py-[9px] text-body text-[#46544F] transition-colors hover:bg-canvas;
+  }
+  .ah-nav-item-active {
+    @apply bg-accent-subtle font-semibold text-accent;
+  }
+
+  /* ── Sort tabs ─────────────────────────────────────────────────────────── */
+  .ah-sort-tab {
+    @apply -mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-[13px] py-[9px] text-body font-medium text-ink-faint transition-colors hover:text-ink;
+  }
+  .ah-sort-tab-active {
+    @apply border-accent font-semibold text-accent;
+  }
+
+  /* ── Links ─────────────────────────────────────────────────────────────── */
   .ah-link {
     @apply text-accent hover:underline;
   }
+
+  /* ── Typography ─────────────────────────────────────────────────────────── */
   .ah-h1 {
-    @apply font-display text-3xl font-bold tracking-tight text-ink;
+    @apply font-display text-display font-bold tracking-[-0.03em] text-ink;
+  }
+  .ah-h2 {
+    @apply font-display text-title font-semibold tracking-[-0.02em] text-ink;
+  }
+  .ah-h3 {
+    @apply font-display text-heading-sm font-bold text-ink;
+  }
+
+  /* ── Moderation banners ──────────────────────────────────────────────── */
+  .ah-banner-pending {
+    @apply rounded-btn border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800;
+  }
+  .ah-banner-rejected {
+    @apply rounded-btn border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800;
+  }
+  .ah-banner-pending-compact {
+    @apply rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800;
+  }
+  .ah-banner-rejected-compact {
+    @apply rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-800;
   }
 }
 
 @layer components {
+  /* ── Markdown body ─────────────────────────────────────────────────────── */
   .markdown-doc {
     @apply leading-relaxed text-ink-soft;
   }
@@ -77,10 +157,10 @@
     @apply my-3 border-l-2 border-line pl-4 italic text-ink-muted;
   }
   .markdown-doc code {
-    @apply rounded bg-[#eef2f0] px-1 py-0.5 font-mono text-[0.85em] text-[#2b3633];
+    @apply rounded-tag bg-[#EEF2F0] px-1 py-0.5 font-mono text-[0.85em] text-[#2B3633];
   }
   .markdown-doc pre {
-    @apply my-3 overflow-x-auto rounded-[11px] bg-[#14201d] p-4 font-mono text-[13px] leading-relaxed text-[#dbe7e2];
+    @apply my-3 overflow-x-auto rounded-card bg-[#14201D] p-4 font-mono text-[13px] leading-relaxed text-[#DBE7E2];
   }
   .markdown-doc pre code {
     @apply bg-transparent p-0 text-inherit;
