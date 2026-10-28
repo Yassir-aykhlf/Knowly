@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-// import { useAuth } from '../hooks/useAuth';
 import { useAuth } from '../contexts/AuthContext'
 import {
 	BODY_MAX,
