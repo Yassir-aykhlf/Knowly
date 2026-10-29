@@ -4,6 +4,9 @@ import NotificationBell from '../components/NotificationBell'
 import { useAuth } from '../contexts/AuthContext'
 import { useHeartbeat } from '../hooks/useHeartbeat'
 import FriendsBell from '../components/friendsBell'
+import KnowlyLogo from '../../assets/KnowlyLogo.svg'
+import AllUsercell from '../components/UsersComp'
+
 
 const mainNav = [
 	{
@@ -63,14 +66,13 @@ export default function AppLayout() {
 		<div className="flex min-h-screen flex-col bg-canvas md:flex-row">
 			<aside className="flex w-full shrink-0 flex-col justify-between border-b border-line bg-surface p-4 md:sticky md:top-0 md:h-screen md:w-[262px] md:border-b-0 md:border-r md:overflow-y-auto">
 				<div>
-					<div className="flex items-center justify-between px-2 pb-3.5 pt-1.5">
-						<Link to="/home" className="flex items-center gap-[11px]">
-							<div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-accent font-display text-[17px] font-bold text-white">
-								A
-							</div>
-							<span className="font-display text-[18px] font-bold leading-none tracking-[-0.02em] text-ink">
-								Knowly
-							</span>
+					<div className="flex h-20 w-full items-center justify-left">
+						<Link to="/home" className="flex h-full items-center justify-center rounded-lg">
+							<img
+								src={KnowlyLogo}
+								alt="Knowly logo"
+								className="h-full max-h-12 w-auto object-contain"
+							/>
 						</Link>
 					</div>
 
@@ -93,6 +95,7 @@ export default function AppLayout() {
 					</nav>
 					<NotificationBell />
 					<FriendsBell />
+					<AllUsercell />
 
 				</div>
 
