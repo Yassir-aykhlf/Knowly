@@ -7,7 +7,6 @@ import FriendsBell from '../components/friendsBell'
 import KnowlyLogo from '../../assets/KnowlyLogo.svg'
 import AllUsercell from '../components/UsersComp'
 
-
 const mainNav = [
 	{
 		to: '/home',
