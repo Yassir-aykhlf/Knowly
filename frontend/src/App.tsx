@@ -14,6 +14,7 @@ import ForbiddenPage from './pages/ForbiddenPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 import HomePage from './pages/HomePage'
+import UsersPage from './pages/UsersPage'
 import QuestionDetailPage from './pages/QuestionDetailPage'
 import AskPage from './pages/AskPage'
 import ProfilePage from './pages/ProfilePage'
@@ -47,6 +48,7 @@ export default function App() {
 			<Route element={<ProtectedRoute />}>
 				<Route element={<AppLayout />}>
 					<Route path="home" element={<HomePage />} />
+					<Route path="users" element={<UsersPage />} />
 					<Route path="questions/:id" element={<QuestionDetailPage />} />
 					<Route path="questions/:id/edit" element={<AskPage />} />
 					<Route path="ask" element={<AskPage />} />
