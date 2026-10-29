@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
 from app.db.session import get_db
 from app.models.session import Session
@@ -11,6 +12,7 @@ from app.schemas.user import (
     ProfileUpdateIn,
     UserMeOut,
     UserProfileOut,
+    Users,
 )
 from app.services.auth import (
     change_password,
@@ -34,6 +36,45 @@ router = APIRouter(
     prefix="/users",
     tags=["users"],
 )
+
+
+@router.get("", response_model=Users, status_code=status.HTTP_200_OK)
+async def get_all_users(
+    page: int,
+    limit: int,
+    db: AsyncSession = Depends(get_db),
+) -> ProfileQuestionPage:
+    stmt = (
+        select(func.count())
+        .select_from(User)
+    )
+
+    result = await db.execute(stmt)
+    count = result.scalar_one()
+
+    offset = (page - 1) * limit
+
+    stmt = (
+        select(User)
+        .offset(offset)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+
+    users_final = []
+
+    for user in users:
+        user = UserMeOut.from_user(user)
+        users_final.append(user)
+
+    return Users(
+        items=users_final,
+        total=count,
+        page=page,
+        limit=limit
+    )
 
 
 @router.get(
