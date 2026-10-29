@@ -32,6 +32,13 @@ class UserMeOut(BaseModel):
         )
 
 
+class Users(BaseModel):
+    items: list[UserMeOut] | None
+    total: int
+    page: int
+    limit: int
+
+
 class FriendshipStateOut(BaseModel):
     state: str
     id: uuid.UUID | None
@@ -52,7 +59,6 @@ class UserProfileOut(BaseModel):
     friendship: FriendshipStateOut | None
 
 
-
 class AuthorOut(BaseModel):
     id: uuid.UUID
     username: str
@@ -67,7 +73,6 @@ class AuthorOut(BaseModel):
             avatar_url=user.avatar_path,
             is_anonymized=user.is_anonymized,
         )
-
 
 
 class ProfileQuestionOut(BaseModel):

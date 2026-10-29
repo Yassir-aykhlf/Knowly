@@ -12,6 +12,13 @@ export type User = {
 	has_password: boolean
 }
 
+export type UserPage = {
+	items: [User]
+	total: number
+	page: number
+	limit: number
+}
+
 export type Author = {
 	id: string
 	username: string
