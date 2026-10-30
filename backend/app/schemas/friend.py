@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -21,11 +21,11 @@ class FriendOut(BaseModel):
     friendship_id: uuid.UUID
     user: AuthorOut
     online: bool
-    last_seen: datetime | None
-    since: datetime
+    last_seen: UtcDateTime | None
+    since: UtcDateTime
 
 
 class PendingRequestOut(BaseModel):
     friendship_id: uuid.UUID
     requester: AuthorOut
-    created_at: datetime
+    created_at: UtcDateTime

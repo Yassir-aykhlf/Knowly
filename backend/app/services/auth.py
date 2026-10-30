@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -11,6 +12,7 @@ from app.services.security import (
     DUMMY_PASSWORD_HASH,
     hash_password,
     verify_password,
+    pwd_context,
 )
 from app.services.session import (
     create_session,
@@ -115,7 +117,28 @@ async def register_user(
     )
 
     db.add(user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        if getattr(exc.orig, "sqlstate", None) != "23505":
+            raise
+        conflicts = (await db.scalars(select(User).where(
+            (User.email == data.email) | (User.username == data.username)
+        ))).all()
+        fields = {}
+        for existing in conflicts:
+            if existing.email == data.email:
+                fields["email"] = "Email already registered"
+            if existing.username == data.username:
+                fields["username"] = "Username already taken"
+        if not fields:
+            raise
+        raise HTTPException(409, detail={
+            "code": "conflict",
+            "message": "Account already exists",
+            "fields": fields,
+        }) from exc
 
     raw_token = await create_session(db, user.id)
 
@@ -156,6 +179,20 @@ async def login_user(
                 },
             },
         )
+
+    if pwd_context.needs_update(password_hash):
+        upgraded = await db.scalar(
+            update(User)
+            .where(User.id == user.id, User.password_hash == password_hash)
+            .values(password_hash=hash_password(data.password))
+            .returning(User.id)
+            .execution_options(synchronize_session=False)
+        )
+        if upgraded is None:
+            raise HTTPException(401, detail={
+                "code": "invalid_credentials",
+                "message": "Credentials changed; sign in again",
+            })
 
     raw_token = await create_session(db, user.id)
 

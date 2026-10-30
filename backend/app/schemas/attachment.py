@@ -1,7 +1,6 @@
 import uuid
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, model_validator
+from app.schemas.common import UtcDateTime
 
 
 class AttachmentOut(BaseModel):
@@ -14,7 +13,7 @@ class AttachmentOut(BaseModel):
     url: str
     parent_type: str | None = None
     parent_id: str | None = None
-    created_at: str
+    created_at: UtcDateTime
 
     @model_validator(mode="before")
     @classmethod
@@ -30,5 +29,5 @@ class AttachmentOut(BaseModel):
             mime_type=attachment.mime_type, size_bytes=attachment.size_bytes,
             url=f"/api/files/{attachment.id}", parent_type=attachment.parent_type,
             parent_id=str(attachment.parent_id) if attachment.parent_id is not None else None,
-            created_at=attachment.created_at.isoformat(),
+            created_at=attachment.created_at,
         )

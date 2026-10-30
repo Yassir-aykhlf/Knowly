@@ -70,6 +70,7 @@ from app.services.security import hash_password  # noqa: E402
 
 # Every data table (alembic_version is intentionally excluded).
 _TABLES = (
+    "ai_usage_events",
     "ai_messages",
     "ai_conversations",
     "attachments",

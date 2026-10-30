@@ -14,7 +14,8 @@ import FileUpload from '../components/FileUpload';
 import AttachmentList from '../components/AttachmentList';
 import MarkdownBody from '../components/MarkdownBody';
 import ModerationBanner from '../components/ModerationBanner';
-import type { Attachment, Question } from '../lib/types';
+import type { Question } from '../lib/types';
+import { useAttachments } from '../hooks/useAttachments';
 
 type FieldName = 'title' | 'body' | 'tags';
 type ServerErrors = Partial<Record<FieldName, string>>;
@@ -50,12 +51,12 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 	const [tagInput, setTagInput] = useState('');
 
 	const [tagError, setTagError] = useState<string | null>(null);
-	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const files = useAttachments();
 
 	const [touched, setTouched] = useState({ title: false, body: false });
 	const [serverErrors, setServerErrors] = useState<ServerErrors>({});
 	const [formError, setFormError] = useState<string | null>(null);
-	const [submitting, setSubmitting] = useState(false);
+	const { submitting, replace: replaceAttachments } = files;
 	const [mode, setMode] = useState<'write' | 'preview'>('write');
 
 	// Edit mode: load the question and fill in the fields.
@@ -71,7 +72,7 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 				setTitle(question.title);
 				setBody(question.body);
 				setTags([...question.tags]);
-				setAttachments(question.attachments ?? []);
+				replaceAttachments(question.attachments ?? []);
 				setLoad({ status: 'ready', question });
 			})
 			.catch((err: unknown) => {
@@ -81,7 +82,7 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 		return () => {
 			ignore = true;
 		};
-	}, [id]);
+	}, [id, replaceAttachments]);
 
 	// A field shows the server's message until you edit that field, then the live check.
 	const titleError = serverErrors.title ?? (touched.title ? validateTitle(title) : null);
@@ -154,16 +155,6 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 		clearServerError('tags');
 	}
 
-	// ---- attachments (FileUpload and AttachmentList are Lane D's) ----
-
-	function handleUploaded(attachment: Attachment) {
-		setAttachments((prev) => [...prev, attachment]);
-	}
-
-	function handleRemoveAttachment(attachmentId: Attachment['id']) {
-		setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-	}
-
 	// ---- submit ----
 
 	function showServerError(err: unknown) {
@@ -182,7 +173,7 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 
 	async function handleSubmit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
-		if (submitting) return;
+		if (files.blocked) return;
 
 		setTouched({ title: true, body: true });
 		setFormError(null);
@@ -193,26 +184,20 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 			return;
 		}
 
-		const payload = {
-			title: title.trim(),
-			body: body.trim(),
-			tags,
-			attachment_ids: attachments.map((a) => a.id),
-		};
-
-		setSubmitting(true);
 		setServerErrors({});
 		try {
-			if (isEdit) {
-				await api.put(`/questions/${id}`, payload);
-				navigate(`/questions/${id}`);
-			} else {
+			const questionId = await files.submit(async (attachment_ids) => {
+				const payload = { title: title.trim(), body: body.trim(), tags, attachment_ids };
+				if (isEdit) {
+					await api.put(`/questions/${id}`, payload);
+					return id;
+				}
 				const created = await api.post<{ id: number | string }>('/questions', payload);
-				navigate(`/questions/${created.id}`);
-			}
+				return String(created.id);
+			});
+			navigate(`/questions/${questionId}`);
 		} catch (err) {
 			showServerError(err);
-			setSubmitting(false);
 		}
 	}
 
@@ -379,9 +364,19 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 					)}
 				</div>
 
-				{/* Lane D builds these; for now they render nothing. */}
-				<FileUpload onUploaded={handleUploaded} />
-				<AttachmentList items={attachments} onDelete={handleRemoveAttachment} />
+				<FileUpload
+					onUploaded={files.add}
+					onRemoved={files.remove}
+					beginOperation={files.beginOperation}
+					disabled={submitting}
+				/>
+				<AttachmentList
+					items={files.items}
+					onDelete={files.remove}
+					beginOperation={files.beginOperation}
+					disabled={submitting}
+				/>
+				{files.pending > 0 && <p role="status">Waiting for files…</p>}
 
 				{formError && (
 					<p className="rounded-btn border border-red-200 bg-red-50 px-3 py-2 text-body-sm text-red-700" role="alert">
@@ -390,7 +385,7 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 				)}
 
 				<div className="flex items-center gap-3">
-					<button type="submit" disabled={submitting} className="ah-btn-primary">
+					<button type="submit" disabled={files.blocked} className="ah-btn-primary">
 						{submitting
 							? isEdit
 								? 'Saving…'
@@ -405,4 +400,3 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 		</main>
 	);
 }
-

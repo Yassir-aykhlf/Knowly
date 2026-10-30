@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import TYPE_CHECKING
 
 from app.schemas.user import AuthorOut
+from app.schemas.common import UtcDateTime
 
 
 if TYPE_CHECKING:
@@ -21,8 +22,8 @@ class CommentOut(BaseModel):
     author: AuthorOut
     moderation_status: str
     moderation_note: str | None = None
-    created_at: str
-    updated_at: str
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
 
     @classmethod
     def from_comment(cls, comment) -> "CommentOut":
@@ -34,8 +35,8 @@ class CommentOut(BaseModel):
             author=AuthorOut.from_user(comment.author),
             moderation_status=comment.moderation_status,
             moderation_note=comment.moderation_note,
-            created_at=comment.created_at.isoformat(),
-            updated_at=comment.updated_at.isoformat(),
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
         )
 
 

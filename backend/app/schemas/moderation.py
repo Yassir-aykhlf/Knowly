@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
@@ -17,7 +17,7 @@ class PendingModerationItem(BaseModel):
     author: AuthorOut
     moderation_note: str | None
     question_id: uuid.UUID | None
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class RejectIn(BaseModel):

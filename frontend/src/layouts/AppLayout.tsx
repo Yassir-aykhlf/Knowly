@@ -88,6 +88,11 @@ export default function AppLayout() {
 
 					<nav className="flex flex-col gap-[5px]">
 						{mainNav.map(renderItem)}
+						{user?.role === 'admin' && (
+							<NavLink to="/admin/moderation" className="block rounded-lg px-3 py-2">
+								Moderation
+							</NavLink>
+						)}
 						<div className="px-[11px] pb-1.5 pt-3.5 font-display text-[11px] font-bold tracking-[0.07em] text-[#A4AFAA]">
 							SOCIAL
 						</div>

@@ -18,6 +18,7 @@ from uuid import UUID
 from sqlalchemy import select, func, exists, update, delete
 from app.services.files import delete_attachments_for, delete_file
 from fastapi import HTTPException
+from app.services import files
 import logging
 
 
@@ -31,9 +32,8 @@ async def accept_answer(
     question_id: UUID,
     body: AcceptAnswerIn,
     db: AsyncSession = Depends(get_db),
-    user: User | None = Depends(get_optional_user),
+    user: User = Depends(get_current_user),
 ):
-    # 403 for non-askers (and 404 for a missing question, per load_owned)
     question = await load_owned(db=db, model=Question, obj_id=question_id, user=user, kind="question")
 
     if body.answer_id is not None:
@@ -70,7 +70,7 @@ async def accept_answer(
 async def update_question(
         question_id: UUID,
         payload: QuestionCreateIn,
-        user: User | None = Depends(get_optional_user),
+        user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)):
     """update (question by it's id) request handler"""
     # 1. load + validate (ownership first, so a stranger gets 403 before any 400)
@@ -89,13 +89,24 @@ async def update_question(
     question.title = title
     question.body = body
     question.tags = tags
-    question.attachment_ids = attachment_ids
 
-    # 2. screen again: the new verdict overwrites the old status
-    await screen_and_stage(db=db, kind="question", text=body, obj=question)
+    await screen_and_stage(
+        db=db,
+        kind="question",
+        text=f"{title}\n\n{body}",
+        obj=question,
+        editing=True,
+        question_author_id=question.author_id,
+    )
 
     # 3. finish
-    # TODO(stub): re-bind attachments here
+    await files.bind_attachments(
+        db,
+        attachment_ids=attachment_ids,
+        parent_type="question",
+        parent_id=question.id,
+        user=user,
+    )
     await db.commit()
     await db.refresh(question)
     return await build_question_out(db, question, user)
@@ -104,7 +115,7 @@ async def update_question(
 @router.delete("/{question_id}", status_code=204)
 async def update_question(
         question_id: UUID,
-        user: User | None = Depends(get_optional_user),
+        user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)):
     """delete (question by it's id) request handler"""
     question = await load_owned(db, Question, question_id, user, "question")
@@ -240,9 +251,20 @@ async def get_question_endpoint(
 ):
     """get (single question by id) request handler"""
     question = await load_viewable_question(db=db, question_id=question_id, viewer=viewer)
-    """added loading the user from DB if it's not the viewer"""
-    user = viewer if viewer is not None and question.author_id == viewer.id else await db.get(User, question.author_id)
-    return await build_question_out(db=db, question=question, user=user)
+    await db.scalar(
+        update(Question)
+        .where(Question.id == question.id)
+        .values(
+            view_count=Question.view_count + 1,
+            updated_at=Question.updated_at,
+        )
+        .returning(Question.view_count)
+        .execution_options(synchronize_session=False)
+    )
+    await db.refresh(question, ["view_count"])
+    result = await build_question_out(db=db, question=question, user=viewer)
+    await db.commit()
+    return result
 
 
 @ router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
@@ -268,9 +290,16 @@ async def create_question_endpoint(
     db.add(new_question)
     await db.flush()
 
-    # STUB: swap for D-09
     text_to_screen = f"{title}\n\n{body}"
     await screen_and_stage(db=db, kind="question", text=text_to_screen, obj=new_question)
+
+    await files.bind_attachments(
+        db,
+        attachment_ids=attachment_ids,
+        parent_type="question",
+        parent_id=new_question.id,
+        user=current_user,
+    )
 
     await db.commit()
     await db.refresh(new_question)

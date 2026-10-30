@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,8 +33,8 @@ class QuestionOut(BaseModel):
     accepted_answer_id: uuid.UUID | None = None
     moderation_status: str
     moderation_note: str | None = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
     answers: list[AnswerOut] = Field(default_factory=list)
     comments: list[CommentOut] = Field(default_factory=list)
     attachments: list[AttachmentOut] = Field(default_factory=list)

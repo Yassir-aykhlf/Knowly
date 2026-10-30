@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { ApiError } from '../lib/api'
 
 type Props = {
+  disabled?: boolean
   initial?: string
   validate: (value: string) => string | null
   max: number
@@ -16,6 +17,7 @@ type Props = {
 }
 
 export default function EditBox({
+  disabled = false,
   initial = '',
   validate,
   max,
@@ -39,7 +41,7 @@ export default function EditBox({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setTouched(true)
-    if (error || busy) return
+    if (error || busy || disabled) return
 
     setBusy(true)
     setServerError(null)
@@ -51,7 +53,11 @@ export default function EditBox({
       }
     } catch (err) {
       setServerError(
-        err instanceof ApiError ? (err.fields?.body ?? err.message) : 'Something went wrong',
+        err instanceof ApiError
+          ? (err.fields?.body ?? err.message)
+          : err instanceof Error
+            ? err.message
+            : 'Something went wrong',
       )
     } finally {
       setBusy(false)
@@ -82,7 +88,7 @@ export default function EditBox({
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || disabled}
           className="ah-btn-primary"
         >
           {busy ? 'Saving…' : submitLabel}
@@ -91,7 +97,7 @@ export default function EditBox({
           <button
             type="button"
             onClick={onCancel}
-            disabled={busy}
+            disabled={busy || disabled}
             className="ah-btn-secondary"
           >
             Cancel

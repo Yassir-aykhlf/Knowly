@@ -51,6 +51,7 @@ async def build_question_out(
             ),
             visible_filter(Comment, user),
         )
+        .options(selectinload(Comment.author))
         .order_by(Comment.created_at.asc())
     )
     comments = result.scalars().all()
@@ -70,6 +71,7 @@ async def build_question_out(
     q_totals = await vote_totals(db, "question", [question.id])
     a_totals = await vote_totals(db, "answer", answer_ids)
 
+    q_votes = await viewer_votes(db, user, "question", [question.id])
     a_votes = await viewer_votes(db, user, "answer", answer_ids)
 
     q_attach = await attachments_for(db, "question", [question.id])
@@ -104,7 +106,9 @@ async def build_question_out(
         answers=answers_out,
         comments=buckets[("question", question.id)],
         vote_total=q_totals.get(question.id, 0),
+        my_vote=q_votes.get(question.id, 0),
         view_count=question.view_count,
+        accepted_answer_id=question.accepted_answer_id,
         created_at=question.created_at,
         updated_at=question.updated_at,
         attachments=q_attach.get(question.id, []),
@@ -149,8 +153,12 @@ def clean_question_fields(
 async def load_viewable_question(
         db: AsyncSession,
         question_id: UUID,
-        viewer: User) -> Question:
-    result = await db.execute(select(Question).where(Question.id == question_id))
+        viewer: User | None) -> Question:
+    result = await db.execute(
+        select(Question)
+        .where(Question.id == question_id)
+        .options(selectinload(Question.author))
+    )
     question = result.scalar_one_or_none()
 
     if question is None or not can_view(question, viewer):

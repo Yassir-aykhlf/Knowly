@@ -31,6 +31,11 @@ def can_view(content, user) -> bool:
 
 
 async def load_owned(db: AsyncSession, model, obj_id: uuid.UUID, user, kind: str):
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "unauthenticated", "message": "Authentication required"},
+        )
     obj = await db.get(model, obj_id)
     if obj is None or not can_view(obj, user):
         raise HTTPException(

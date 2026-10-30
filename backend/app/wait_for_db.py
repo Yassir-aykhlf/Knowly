@@ -12,7 +12,7 @@ async def wait(retries: int = 30, delay: float = 2.0) -> None:
             await engine.dispose()
             return
         except Exception as exc:
-            print(f"Database not ready (attempt {attempt/{retries}}: {exc})")
+            print(f"Database not ready (attempt {attempt}/{retries}): {exc}")
             await asyncio.sleep(delay)
     print("Database did not become ready in time.", file=sys.stderr)
     await engine.dispose()

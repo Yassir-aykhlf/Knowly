@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -25,8 +25,8 @@ class MessageOut(BaseModel):
     sender_id: uuid.UUID
     receiver_id: uuid.UUID
     body: str
-    read_at: datetime | None
-    created_at: datetime
+    read_at: UtcDateTime | None
+    created_at: UtcDateTime
 
 
 class MessagePage(BaseModel):
@@ -39,6 +39,6 @@ class MessagePage(BaseModel):
 class ConversationOut(BaseModel):
     user: AuthorOut
     last_message: str
-    last_message_at: datetime
+    last_message_at: UtcDateTime
     last_message_from_me: bool
     unread_count: int
