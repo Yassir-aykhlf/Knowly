@@ -40,42 +40,34 @@ router = APIRouter(
 
 @router.get("", response_model=Users, status_code=status.HTTP_200_OK)
 async def get_all_users(
-    page: int,
-    limit: int,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=15, ge=1, le=100),
+    q: str | None = Query(default=None, max_length=50),
     db: AsyncSession = Depends(get_db),
-) -> ProfileQuestionPage:
-    stmt = (
-        select(func.count())
-        .select_from(User)
-    )
+) -> Users:
+    conditions = []
+    if q and q.strip():
+        escaped = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        conditions.append(User.username.ilike(f"%{escaped}%", escape="\\"))
 
-    result = await db.execute(stmt)
-    count = result.scalar_one()
-
-    offset = (page - 1) * limit
+    count_stmt = select(func.count()).select_from(User).where(*conditions)
+    count = (await db.execute(count_stmt)).scalar_one()
 
     stmt = (
         select(User)
-        .offset(offset)
+        .where(*conditions)
+        .order_by(User.username)
+        .offset((page - 1) * limit)
         .limit(limit)
     )
-
-    result = await db.execute(stmt)
-    users = result.scalars().all()
-
-    users_final = []
-
-    for user in users:
-        user = UserMeOut.from_user(user)
-        users_final.append(user)
+    users = (await db.execute(stmt)).scalars().all()
 
     return Users(
-        items=users_final,
+        items=[UserMeOut.from_user(u) for u in users],
         total=count,
         page=page,
-        limit=limit
+        limit=limit,
     )
-
 
 @router.get(
     "/me",
