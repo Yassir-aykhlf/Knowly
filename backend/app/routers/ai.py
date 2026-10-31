@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db.session import get_db
-from app.models.ai import AiConversation, AiMessage
+from app.models.ai import AiConversation, AiMessage, AiUsageEvent
 from app.models.question import Question
 from app.models.user import User
 from app.schemas.ai import ConversationCreate, ConversationDetail, ConversationOut, MessageCreate, QuestionContext
@@ -178,15 +178,18 @@ async def send_message(
     conversation = await load_own_conversation(db, id, user)
     await db.scalar(select(User.id).where(User.id == user.id).with_for_update())
     now = datetime.utcnow()
-    count, oldest = (await db.execute(select(func.count(AiMessage.id), func.min(AiMessage.created_at))
-        .join(AiConversation, AiConversation.id == AiMessage.conversation_id)
-        .where(AiConversation.user_id == user.id, AiMessage.role == "user",
-               AiMessage.created_at > now - timedelta(hours=1)))).one()
+    count, oldest = (await db.execute(select(
+        func.count(AiUsageEvent.id), func.min(AiUsageEvent.created_at)
+    ).where(
+        AiUsageEvent.user_id == user.id,
+        AiUsageEvent.created_at > now - timedelta(hours=1),
+    ))).one()
     if count >= settings.LLM_RATE_LIMIT_PER_HOUR:
         retry_after = max(1, math.ceil((oldest + timedelta(hours=1) - now).total_seconds())) if oldest else 3600
         raise HTTPException(429, detail={
             "code": "rate_limited", "message": "Hourly assistant message limit reached",
         }, headers={"Retry-After": str(retry_after)})
+    db.add(AiUsageEvent(user_id=user.id, created_at=now))
     db.add(AiMessage(
         conversation_id=conversation.id, role="user", content=payload.content, created_at=now,
     ))

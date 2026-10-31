@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -13,7 +13,7 @@ class UserMeOut(BaseModel):
     bio: str | None
     avatar_url: str | None
     role: str
-    created_at: datetime
+    created_at: UtcDateTime
     is_anonymized: bool
     has_password: bool
 
@@ -49,7 +49,7 @@ class UserProfileOut(BaseModel):
     username: str
     bio: str | None
     avatar_url: str | None
-    created_at: datetime
+    created_at: UtcDateTime
     is_anonymized: bool
 
     question_count: int
@@ -85,7 +85,7 @@ class ProfileQuestionOut(BaseModel):
     answer_count: int
     view_count: int
     has_accepted_answer: bool
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class ProfileQuestionPage(BaseModel):
@@ -102,7 +102,7 @@ class ProfileAnswerOut(BaseModel):
     excerpt: str
     vote_total: int
     is_accepted: bool
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class ProfileAnswerPage(BaseModel):

@@ -1,7 +1,20 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
-class RegisterIn(BaseModel):
+class PasswordInputModel(BaseModel):
+    @field_validator("password", "current_password", "new_password", check_fields=False)
+    @classmethod
+    def validate_password_input(cls, value: str | None) -> str | None:
+        if value is not None:
+            if "\0" in value:
+                raise ValueError("Password must not contain a null byte")
+            if len(value) > 128:
+                raise ValueError("Password must be at most 128 characters")
+            value.encode("utf-8")
+        return value
+
+
+class RegisterIn(PasswordInputModel):
     email: EmailStr
 
     username: str = Field(
@@ -31,12 +44,12 @@ class RegisterIn(BaseModel):
         return value
 
 
-class LoginIn(BaseModel):
+class LoginIn(PasswordInputModel):
     email: EmailStr
     password: str
 
 
-class PasswordChangeIn(BaseModel):
+class PasswordChangeIn(PasswordInputModel):
     current_password: str
 
     new_password: str = Field(
@@ -61,11 +74,11 @@ class PasswordChangeIn(BaseModel):
 
 
 
-class AccountDeleteIn(BaseModel):
+class AccountDeleteIn(PasswordInputModel):
     password: str | None = None
     confirm: str | None = None
 
 
 
-class GoogleLinkIn(BaseModel):
+class GoogleLinkIn(PasswordInputModel):
     password: str

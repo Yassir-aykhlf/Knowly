@@ -78,3 +78,15 @@ class AiMessage(Base):
         CheckConstraint("role IN ('user','assistant')", name="ck_ai_messages_role"),
         Index("ix_ai_messages_conversation_created", "conversation_id", "created_at"),
     )
+
+
+class AiUsageEvent(Base):
+    __tablename__ = "ai_usage_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+    __table_args__ = (Index("ix_ai_usage_user_created", "user_id", "created_at"),)

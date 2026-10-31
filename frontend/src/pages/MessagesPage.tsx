@@ -3,19 +3,21 @@ import { Link } from 'react-router-dom'
 
 import Avatar from '../components/Avatar'
 import { usePolling } from '../hooks/usePolling'
-import { api } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { relativeTime } from '../lib/format'
 import type { Conversation } from '../lib/types'
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchConversations = useCallback(async () => {
     try {
       const data = await api.get<Conversation[]>('/messages/conversations')
       setConversations(data)
-    } catch {
-      setConversations([])
+      setError(null)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not load conversations.')
     }
   }, [])
 
@@ -29,7 +31,8 @@ export default function MessagesPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-4 text-xl font-semibold">Messages</h1>
 
-      {conversations === null && <p className="text-sm text-slate-500">Loading...</p>}
+      {error && <p role="alert">{error}{' '}<button type="button" onClick={() => void fetchConversations()}>Retry</button></p>}
+      {conversations === null && !error && <p className="text-sm text-slate-500">Loading...</p>}
 
       {conversations !== null && conversations.length === 0 && (
         <p className="text-sm text-slate-500">No conversations yet.</p>

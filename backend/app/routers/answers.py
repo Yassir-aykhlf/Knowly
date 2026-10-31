@@ -145,7 +145,7 @@ async def create_answer(
     await db.commit()
     await db.refresh(answer)
     await db.refresh(answer, ["author"])
-    return AnswerOut.from_answer(answer)
+    return await answer_out(db, answer, user)
 
 
 @router.put("/answers/{answer_id}", response_model=AnswerOut)

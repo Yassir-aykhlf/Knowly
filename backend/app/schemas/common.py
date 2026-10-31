@@ -1,4 +1,16 @@
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel
+
+
+def as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+UtcDateTime = Annotated[datetime, AfterValidator(as_utc)]
 
 EXCERPT_LEN = 240
 

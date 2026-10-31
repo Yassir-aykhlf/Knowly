@@ -1,4 +1,4 @@
-from app.models.ai import AiConversation, AiMessage
+from app.models.ai import AiConversation, AiMessage, AiUsageEvent
 from app.models.answer import Answer
 from app.models.attachment import Attachment
 from app.models.comment import Comment
@@ -13,6 +13,7 @@ from app.models.vote import Vote
 __all__ = [
     "AiConversation",
     "AiMessage",
+    "AiUsageEvent",
     "Answer",
     "Attachment",
     "Comment",

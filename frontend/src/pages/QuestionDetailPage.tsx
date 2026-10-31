@@ -145,7 +145,24 @@ export default function QuestionDetailPage() {
             </ul>
           )}
 
-          <AttachmentList items={question.attachments} />
+          <AttachmentList
+            items={question.attachments}
+            onDelete={
+              isAsker
+                ? (attachmentId) =>
+                    setQuestion((current) =>
+                      current
+                        ? {
+                            ...current,
+                            attachments: current.attachments.filter(
+                              (attachment) => attachment.id !== attachmentId,
+                            ),
+                          }
+                        : current,
+                    )
+                : undefined
+            }
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-3 text-body-sm">

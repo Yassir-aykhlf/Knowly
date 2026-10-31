@@ -139,6 +139,8 @@ def valid_google_state(
 ) -> bool:
     if not query_state or not cookie_state:
         return False
+    if not query_state.isascii() or not cookie_state.isascii():
+        return False
 
     if not hmac.compare_digest(
         query_state,

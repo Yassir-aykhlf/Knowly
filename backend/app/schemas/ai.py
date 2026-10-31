@@ -1,6 +1,6 @@
 import uuid
-from datetime import datetime
 from typing import Literal
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,8 +20,8 @@ class ConversationOut(BaseModel):
     id: uuid.UUID
     title: str | None
     question: QuestionContext | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
 
 
 class MessageOut(BaseModel):
@@ -30,7 +30,7 @@ class MessageOut(BaseModel):
     id: uuid.UUID
     role: Literal["user", "assistant"]
     content: str
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class ConversationDetail(ConversationOut):

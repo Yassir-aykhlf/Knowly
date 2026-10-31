@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import TYPE_CHECKING
 
 from app.schemas.user import AuthorOut
+from app.schemas.common import UtcDateTime
 from app.schemas.comment import CommentOut
 from app.schemas.attachment import AttachmentOut
 from app.services.content import viewer_votes, vote_totals
@@ -23,8 +24,8 @@ class AnswerOut(BaseModel):
     my_vote: int
     moderation_status: str
     moderation_note: str | None = None
-    created_at: str
-    updated_at: str
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
     comments: list[CommentOut] = Field(default_factory=list)
     attachments: list[AttachmentOut] = Field(default_factory=list)
 
@@ -41,8 +42,8 @@ class AnswerOut(BaseModel):
             my_vote=my_vote,
             moderation_status=answer.moderation_status,
             moderation_note=answer.moderation_note,
-            created_at=answer.created_at.isoformat(),
-            updated_at=answer.updated_at.isoformat(),
+            created_at=answer.created_at,
+            updated_at=answer.updated_at,
             comments=comments or [],
             attachments=attachments or [],
         )

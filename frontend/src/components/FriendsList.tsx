@@ -12,6 +12,9 @@ type Props = {
 	setFriends: (friends: Friend[]) => void
 	setPending: (pending: PendingRequest[]) => void
 	refetchFriends: () => void
+	friendsError?: string | null
+	pendingError?: string | null
+	refetchPending: () => void
 }
 
 export default function FriendsList({
@@ -20,6 +23,9 @@ export default function FriendsList({
 	setFriends,
 	setPending,
 	refetchFriends,
+	friendsError,
+	pendingError,
+	refetchPending,
 }: Props) {
 	const { showToast } = useToast()
 
@@ -62,6 +68,8 @@ export default function FriendsList({
 
 			<section className="mb-10">
 				<h2 className="mb-3 text-lg font-semibold">Requests</h2>
+				{pendingError && <p role="alert">{pendingError}{' '}<button type="button" onClick={refetchPending}>Retry</button></p>}
+				{pending === null && !pendingError && <p className="text-sm text-slate-500">Loading...</p>}
 
 				{pending === null && <p className="text-sm text-slate-500">Loading...</p>}
 
@@ -102,6 +110,8 @@ export default function FriendsList({
 
 			<section>
 				<h2 className="mb-3 text-lg font-semibold">Friends</h2>
+				{friendsError && <p role="alert">{friendsError}{' '}<button type="button" onClick={refetchFriends}>Retry</button></p>}
+				{friends === null && !friendsError && <p className="text-sm text-slate-500">Loading...</p>}
 
 				{friends === null && <p className="text-sm text-slate-500">Loading...</p>}
 
@@ -141,6 +151,6 @@ export default function FriendsList({
 					</ul>
 				)}
 			</section>
-		</div>
+		</div >
 	)
 }

@@ -1,7 +1,9 @@
 // Small formatting helpers shared across the UI.
 
 export function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime()
+  const normalized = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso) ? iso : `${iso}Z`
+  const then = new Date(normalized).getTime()
+  if (!Number.isFinite(then)) return 'Unknown time'
   const seconds = Math.floor((Date.now() - then) / 1000)
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)

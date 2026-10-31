@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from app.schemas.common import UtcDateTime
 
 from pydantic import BaseModel
 
@@ -14,8 +14,8 @@ class NotificationOut(BaseModel):
     link: str
     actor: AuthorOut | None
     actor_count: int
-    read_at: datetime | None
-    created_at: datetime
+    read_at: UtcDateTime | None
+    created_at: UtcDateTime
 
 
 class NotificationPage(BaseModel):

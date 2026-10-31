@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import AttachmentList from './AttachmentList'
 import Comments from './Comments'
@@ -11,6 +11,7 @@ import { api, ApiError } from '../lib/api'
 import type { Answer } from '../lib/types'
 import { BODY_MAX, validateBody } from '../lib/validation'
 import { useToast } from '../contexts/ToastContext'
+import { useAttachments } from '../hooks/useAttachments'
 
 export const SELF_VOTE_REASON = "You can't vote on your own post"
 
@@ -36,6 +37,11 @@ export default function AnswerItem({
   const [busy, setBusy] = useState(false)
   const isMine = answer.author.id === viewerId
   const canAccept = viewerIsAsker && answer.moderation_status === 'approved'
+  const files = useAttachments(answer.attachments)
+
+  useEffect(() => {
+    files.replace(answer.attachments)
+  }, [answer.attachments, files.replace])
 
   async function toggleAccept() {
     setBusy(true)
@@ -52,10 +58,9 @@ export default function AnswerItem({
   }
 
   async function save(body: string) {
-    await api.put<Answer>(`/answers/${answer.id}`, {
-      body,
-      attachment_ids: answer.attachments.map((a) => a.id),
-    })
+    await files.submit((attachment_ids) =>
+      api.put<Answer>(`/answers/${answer.id}`, { body, attachment_ids }),
+    )
     setEditing(false)
     onChanged()
   }
@@ -131,13 +136,19 @@ export default function AnswerItem({
             submitLabel="Save"
             onSubmit={save}
             onCancel={() => setEditing(false)}
+            disabled={files.blocked || busy}
             autoFocus
           />
         ) : (
           <MarkdownBody markdown={answer.body} />
         )}
 
-        <AttachmentList items={answer.attachments} />
+        <AttachmentList
+          items={files.items}
+          onDelete={isMine ? files.remove : undefined}
+          beginOperation={files.beginOperation}
+          disabled={files.submitting || busy}
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-3 text-body-sm">

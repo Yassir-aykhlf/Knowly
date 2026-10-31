@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import EditBox from './EditBox'
+import FileUpload from './FileUpload'
+import AttachmentList from './AttachmentList'
 import { api } from '../lib/api'
 import type { Answer } from '../lib/types'
 import { BODY_MAX, validateBody } from '../lib/validation'
+import { useAttachments } from '../hooks/useAttachments'
 
 export type AnswerPrefill = {
   prefillBody: string
@@ -27,13 +31,20 @@ type Props = {
 }
 
 export default function AnswerComposer({ questionId, prefill, onPosted }: Props) {
+  const files = useAttachments()
+  const [uploadVersion, setUploadVersion] = useState(0)
+
   async function post(body: string) {
-    await api.post<Answer>(`/questions/${questionId}/answers`, {
-      body,
-      is_ai_assisted: prefill?.isAiAssisted ?? false,
-      from_conversation_id: prefill?.fromConversationId ?? null,
-      attachment_ids: [],
-    })
+    await files.submit((attachment_ids) =>
+      api.post<Answer>(`/questions/${questionId}/answers`, {
+        body,
+        is_ai_assisted: prefill?.isAiAssisted ?? false,
+        from_conversation_id: prefill?.fromConversationId ?? null,
+        attachment_ids,
+      }),
+    )
+    files.replace([])
+    setUploadVersion((value) => value + 1)
     onPosted()
   }
 
@@ -45,6 +56,19 @@ export default function AnswerComposer({ questionId, prefill, onPosted }: Props)
           Drafted with the AI assistant. This answer will be marked AI-assisted.
         </p>
       )}
+      <FileUpload
+        key={uploadVersion}
+        onUploaded={files.add}
+        beginOperation={files.beginOperation}
+        disabled={files.submitting}
+      />
+      <AttachmentList
+        items={files.items}
+        onDelete={files.remove}
+        beginOperation={files.beginOperation}
+        disabled={files.submitting}
+      />
+      {files.pending > 0 && <p role="status">Waiting for files…</p>}
       {/* a new prefill remounts the box, so it starts from the new text */}
       <EditBox
         key={prefill?.prefillBody ?? ''}
@@ -55,6 +79,7 @@ export default function AnswerComposer({ questionId, prefill, onPosted }: Props)
         placeholder="Write your answer. Markdown is supported."
         submitLabel="Post your answer"
         onSubmit={post}
+        disabled={files.blocked}
         resetOnSuccess
       />
     </section>

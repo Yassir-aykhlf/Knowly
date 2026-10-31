@@ -87,8 +87,15 @@ export default function SettingsPage() {
   }
 
   async function uploadAvatar(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file || avatarSaving) return
+    const allowed = new Set(['image/png', 'image/jpeg', 'image/webp'])
+    if (!allowed.has(file.type) || file.size === 0 || file.size > 2 * 1024 * 1024) {
+      setAvatarError('Choose a non-empty PNG, JPEG or WebP image no larger than 2 MiB.')
+      input.value = ''
+      return
+    }
 
     setAvatarSaving(true)
     setAvatarError(null)
@@ -102,12 +109,12 @@ export default function SettingsPage() {
       showToast('Avatar updated.')
     } catch (err) {
       const message = err instanceof ApiError
-        ? err.fields?.file ?? err.message
+        ? err.fields?.avatar ?? err.message
         : 'Could not upload avatar.'
       setAvatarError(message)
     } finally {
       setAvatarSaving(false)
-      event.target.value = ''
+      input.value = ''
     }
   }
 
