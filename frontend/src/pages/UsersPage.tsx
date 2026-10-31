@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { UserPage } from '../lib/types';
 import Avatar from '../components/Avatar';
+import UserSearchBar from '../components/UserSearchBar';
 
 const LIMIT = 15;
 
@@ -23,6 +24,7 @@ function errorMessage(err: unknown): string {
 export default function UsersPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const page = parsePage(searchParams.get('page'));
+	const q = searchParams.get('q') ?? '';
 
 	const [state, setState] = useState<State>({ status: 'loading' });
 	const [attempt, setAttempt] = useState(0); // bumped by Retry to refetch
@@ -35,6 +37,7 @@ export default function UsersPage() {
 			page: String(page),
 			limit: String(LIMIT),
 		});
+		if (q) query.set('q', q);
 
 		api
 			.get<UserPage>(`/users?${query.toString()}`)
@@ -48,7 +51,7 @@ export default function UsersPage() {
 		return () => {
 			ignore = true;
 		};
-	}, [page, attempt]);
+	}, [page, q, attempt]);
 
 	// A hand-typed ?page=99 beyond the last page jumps to the last page.
 	useEffect(() => {
@@ -56,16 +59,24 @@ export default function UsersPage() {
 		const { total, limit } = state.data;
 		const lastPage = Math.max(1, Math.ceil(total / limit));
 		if (page > lastPage) {
-			setSearchParams({ page: String(lastPage) }, { replace: true });
+			const params: Record<string, string> = { page: String(lastPage) };
+			if (q) params.q = q;
+			setSearchParams(params, { replace: true });
 		}
-	}, [state, page, setSearchParams]);
+	}, [state, page, q, setSearchParams]);
 
 	useEffect(() => {
 		window.scrollTo(0, 0);
 	}, [page]);
 
-	function govoteage(next: number) {
-		setSearchParams({ page: String(next) });
+	function goToPage(next: number) {
+		const params: Record<string, string> = { page: String(next) };
+		if (q) params.q = q;
+		setSearchParams(params);
+	}
+
+	function handleSearch(value: string) {
+		setSearchParams(value ? { q: value, page: '1' } : { page: '1' });
 	}
 
 	function renderBody() {
@@ -76,7 +87,7 @@ export default function UsersPage() {
 		if (state.status === 'error') {
 			return (
 				<div role="alert" className="mx-auto max-w-[880px] px-10 py-8 text-sm">
-					<p className="mb-2 text-ink-muted">Couldn&apos;t load questions.</p>
+					<p className="mb-2 text-ink-muted">Couldn&apos;t load users.</p>
 					<p className="mb-4 text-ink-faint">{state.message}</p>
 					<button type="button" onClick={() => setAttempt((n) => n + 1)} className="ah-btn-secondary">
 						Retry
@@ -88,6 +99,14 @@ export default function UsersPage() {
 		const { items, total, limit } = state.data;
 
 		const totalPages = Math.max(1, Math.ceil(total / limit));
+
+		if (items.length === 0) {
+			return (
+				<p className="mx-auto max-w-[880px] px-10 py-8 text-body text-ink-faint">
+					No users found.
+				</p>
+			);
+		}
 
 		return (
 			<>
@@ -109,7 +128,7 @@ export default function UsersPage() {
 						<button
 							type="button"
 							disabled={page <= 1}
-							onClick={() => govoteage(page - 1)}
+							onClick={() => goToPage(page - 1)}
 							className="ah-btn-primary"
 						>
 							Previous
@@ -122,7 +141,7 @@ export default function UsersPage() {
 						<button
 							type="button"
 							disabled={page >= totalPages}
-							onClick={() => govoteage(page + 1)}
+							onClick={() => goToPage(page + 1)}
 							className="ah-btn-primary"
 						>
 							Next
@@ -144,11 +163,8 @@ export default function UsersPage() {
 
 					</div>
 				</div>
-				<div
-					className="flex gap-1 border-b border-line"
-					role="group"
-					aria-label="Sort questions"
-				>
+				<div className="border-b border-line pb-4">
+					<UserSearchBar value={q} onSearch={handleSearch} />
 				</div>
 
 			</header>
