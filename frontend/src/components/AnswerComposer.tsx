@@ -58,6 +58,7 @@ export default function AnswerComposer({ questionId, prefill, onPosted }: Props)
       )}
       <FileUpload
         key={uploadVersion}
+        attachmentCount={files.items.length}
         onUploaded={files.add}
         beginOperation={files.beginOperation}
         disabled={files.submitting}

@@ -365,6 +365,7 @@ export default function QuestionForm({ id }: { id: string | undefined }) {
 				</div>
 
 				<FileUpload
+					attachmentCount={files.items.length}
 					onUploaded={files.add}
 					onRemoved={files.remove}
 					beginOperation={files.beginOperation}
