@@ -13,7 +13,7 @@ export type User = {
 }
 
 export type UserPage = {
-	items: [User]
+	items: User[]
 	total: number
 	page: number
 	limit: number
