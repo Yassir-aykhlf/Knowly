@@ -53,9 +53,9 @@ async def pending_queue(
     items = []
     for kind, model in MODELS.items():
         rows = await db.scalars(select(model).where(model.moderation_status == 'pending')
-            .options(joinedload(model.author)).order_by(model.created_at, model.id).limit(limit))
+            .options(joinedload(model.author)).order_by(model.created_at.desc(), model.id.desc()).limit(limit))
         items.extend((kind, obj) for obj in rows)
-    items.sort(key=lambda item: (item[1].created_at, str(item[1].id), item[0]))
+    items.sort(key=lambda item: (item[1].created_at, str(item[1].id), item[0]), reverse=True)
     items = items[:limit]
     contexts = await _contexts(db, items)
     return [PendingModerationItem(

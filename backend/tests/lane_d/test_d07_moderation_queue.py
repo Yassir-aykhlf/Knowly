@@ -7,7 +7,7 @@ milestone m4.
 """
 
 
-async def test_pending_queue_lists_held_content_oldest_first(auth_client, factory):
+async def test_pending_queue_lists_held_content_newest_first(auth_client, factory):
     author = await factory.user()
     q1 = await factory.question(author=author, moderation_status="pending",
                                 title="First held question awaiting moderation here")
@@ -19,8 +19,11 @@ async def test_pending_queue_lists_held_content_oldest_first(auth_client, factor
     assert r.status_code == 200
     ids = [item["id"] for item in r.json()]
     assert str(q1.id) in ids and str(q2.id) in ids
-    # Oldest first.
-    assert ids.index(str(q1.id)) < ids.index(str(q2.id))
+    # Newest first, including when the queue is limited.
+    assert ids.index(str(q2.id)) < ids.index(str(q1.id))
+    limited = await admin_c.get("/api/moderation/pending", params={"limit": 1})
+    assert limited.status_code == 200
+    assert [item["id"] for item in limited.json()] == [str(q2.id)]
 
 
 async def test_approve_flips_status(auth_client, factory, db):
