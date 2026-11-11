@@ -10,7 +10,7 @@ import type { User } from '../lib/types'
 import { USERNAME_RE, validatePassword } from '../lib/validation'
 
 export default function SettingsPage() {
-  const { user, refresh } = useAuth()
+  const { user, refresh, logout } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
 
@@ -24,6 +24,7 @@ export default function SettingsPage() {
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
   const [passwordSaving, setPasswordSaving] = useState(false)
 
@@ -40,7 +41,7 @@ export default function SettingsPage() {
   }, [user?.id, user?.username, user?.bio])
 
   if (!user) {
-    return <p className="p-8">Loading your account…</p>
+    return <p className="ah-page text-body text-ink-muted" role="status">Loading your account…</p>
   }
 
   const canDelete = user.has_password
@@ -144,6 +145,10 @@ export default function SettingsPage() {
       setPasswordErrors({ new_password: validation })
       return
     }
+    if (newPassword !== confirmPassword) {
+      setPasswordErrors({ confirm_password: 'Passwords do not match.' })
+      return
+    }
 
     setPasswordErrors({})
     setPasswordSaving(true)
@@ -156,6 +161,7 @@ export default function SettingsPage() {
 
       setCurrentPassword('')
       setNewPassword('')
+      setConfirmPassword('')
       showToast('Password changed successfully.')
     } catch (err) {
       if (err instanceof ApiError) {
@@ -211,16 +217,21 @@ export default function SettingsPage() {
     }
   }
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+  async function handleLogout() {
+    await logout()
+    navigate('/login')
+  }
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold">Profile</h2>
+  return (
+    <div className="ah-page max-w-[840px] space-y-5">
+      <h1 className="ah-h1">Settings</h1>
+
+      <section className="ah-card p-4 lg:p-6" aria-labelledby="settings-profile">
+        <h2 id="settings-profile" className="ah-h3 mb-4">Profile</h2>
 
         <form onSubmit={saveProfile} className="space-y-4">
           <div>
-            <label htmlFor="settings-username" className="mb-1 block text-sm font-medium">
+            <label htmlFor="settings-username" className="ah-label">
               Username
             </label>
             <input
@@ -230,24 +241,27 @@ export default function SettingsPage() {
                 setUsername(event.target.value)
                 setProfileErrors((old) => ({ ...old, username: '' }))
               }}
-              aria-invalid={Boolean(profileErrors.username)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              aria-invalid={Boolean(profileErrors.username) || (username.length > 0 && !USERNAME_RE.test(username))}
+              aria-describedby="settings-username-help"
+              autoComplete="username"
+              className="ah-input"
               required
             />
-            {!USERNAME_RE.test(username) && username.length > 0 && (
-              <p className="mt-1 text-sm text-amber-700">
-                Use 3–30 letters, numbers, _ or -.
-              </p>
-            )}
+            <p
+              id="settings-username-help"
+              className={`ah-help ${!USERNAME_RE.test(username) && username.length > 0 ? 'text-warn' : ''}`}
+            >
+              Use 3–30 letters, numbers, _ or -.
+            </p>
             {profileErrors.username && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="ah-error" role="alert">
                 {profileErrors.username}
               </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="settings-bio" className="mb-1 block text-sm font-medium">
+            <label htmlFor="settings-bio" className="ah-label">
               Bio
             </label>
             <textarea
@@ -259,75 +273,74 @@ export default function SettingsPage() {
               }}
               rows={4}
               aria-invalid={bio.length > 500 || Boolean(profileErrors.bio)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              className="ah-textarea"
             />
-            <p className="text-xs text-slate-500">{bio.length}/500 characters</p>
+            <p className={`ah-help tabular-nums ${bio.length > 500 ? 'text-danger' : ''}`}>{bio.length}/500 characters</p>
             {bio.length > 500 && (
-              <p className="text-sm text-red-600">
+              <p className="ah-error">
                 Bio must be 500 characters or fewer.
               </p>
             )}
             {profileErrors.bio && (
-              <p className="text-sm text-red-600">{profileErrors.bio}</p>
+              <p className="ah-error" role="alert">{profileErrors.bio}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={profileSaving || !USERNAME_RE.test(username) || bio.length > 500}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="ah-btn-primary"
           >
             {profileSaving ? 'Saving…' : 'Save profile'}
           </button>
         </form>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold">Avatar</h2>
+      <section className="ah-card p-4 lg:p-6" aria-labelledby="settings-avatar">
+        <h2 id="settings-avatar" className="ah-h3 mb-4">Avatar</h2>
 
-        <div className="mb-4 flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Avatar user={user} size={64} />
-          <span className="text-sm text-slate-500">Current profile picture</span>
-        </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className={`ah-btn-secondary focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${avatarSaving ? 'cursor-not-allowed opacity-50' : ''}`}>
+              {avatarSaving ? 'Working…' : 'Upload image'}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={uploadAvatar}
+                disabled={avatarSaving}
+                className="sr-only"
+              />
+            </label>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-sm">
-            Upload avatar
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={uploadAvatar}
-              disabled={avatarSaving}
-              className="sr-only"
-            />
-          </label>
-
-          {user.avatar_url && (
-            <button
-              type="button"
-              onClick={removeAvatar}
-              disabled={avatarSaving}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm disabled:opacity-50"
-            >
-              Remove avatar
-            </button>
-          )}
+            {user.avatar_url && (
+              <button
+                type="button"
+                onClick={removeAvatar}
+                disabled={avatarSaving}
+                className="ah-btn-ghost"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
+        <p className="ah-help mt-3">PNG, JPEG or WebP, up to 2 MiB.</p>
 
         {avatarError && (
-          <p role="alert" className="mt-2 text-sm text-red-600">
+          <p role="alert" className="ah-error">
             {avatarError}
           </p>
         )}
       </section>
 
       {user.has_password && (
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">Password</h2>
+        <section className="ah-card p-4 lg:p-6" aria-labelledby="settings-password">
+          <h2 id="settings-password" className="ah-h3 mb-4">Password</h2>
 
           <form onSubmit={savePassword} className="space-y-4">
             <div>
-              <label htmlFor="settings-current-password" className="mb-1 block text-sm font-medium">
+              <label htmlFor="settings-current-password" className="ah-label">
                 Current password
               </label>
               <input
@@ -336,57 +349,96 @@ export default function SettingsPage() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                aria-invalid={Boolean(passwordErrors.current_password)}
+                className="ah-input"
                 required
               />
               {passwordErrors.current_password && (
-                <p className="text-sm text-red-600">
+                <p className="ah-error" role="alert">
                   {passwordErrors.current_password}
                 </p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="settings-new-password" className="mb-1 block text-sm font-medium">
-                New password
-              </label>
-              <input
-                id="settings-new-password"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                required
-              />
-              {passwordErrors.new_password && (
-                <p className="text-sm text-red-600">
-                  {passwordErrors.new_password}
-                </p>
-              )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="settings-new-password" className="ah-label">
+                  New password
+                </label>
+                <input
+                  id="settings-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  aria-invalid={Boolean(passwordErrors.new_password)}
+                  className="ah-input"
+                  required
+                />
+                {passwordErrors.new_password && (
+                  <p className="ah-error" role="alert">
+                    {passwordErrors.new_password}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="settings-confirm-password" className="ah-label">
+                  Confirm new password
+                </label>
+                <input
+                  id="settings-confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  aria-invalid={Boolean(passwordErrors.confirm_password)}
+                  className="ah-input"
+                  required
+                />
+                {passwordErrors.confirm_password && (
+                  <p className="ah-error" role="alert">
+                    {passwordErrors.confirm_password}
+                  </p>
+                )}
+              </div>
             </div>
+            <p className="ah-help">8–128 characters, with at least one letter and one digit.</p>
 
             <button
               type="submit"
               disabled={passwordSaving}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="ah-btn-secondary"
             >
-              {passwordSaving ? 'Updating…' : 'Change password'}
+              {passwordSaving ? 'Updating…' : 'Update password'}
             </button>
           </form>
         </section>
       )}
 
-      <section className="rounded-lg border border-red-300 bg-white p-6">
-        <h2 className="text-lg font-semibold text-red-700">Danger zone</h2>
-        <p className="my-3 text-sm text-slate-600">
+      <section className="ah-card flex flex-wrap items-center justify-between gap-4 p-4 lg:p-6" aria-labelledby="settings-session">
+        <div className="min-w-0">
+          <h2 id="settings-session" className="ah-h3">Session</h2>
+          <p className="mt-1 break-words text-body text-ink-muted">
+            Signed in as <span className="font-semibold text-ink-soft">{user.email ?? user.username}</span>
+          </p>
+        </div>
+        <button type="button" onClick={() => void handleLogout()} className="ah-btn-secondary">
+          Log out
+        </button>
+      </section>
+
+      <section className="ah-card border-danger-line p-4 lg:p-6" aria-labelledby="settings-danger">
+        <h2 id="settings-danger" className="ah-h3 text-danger">Danger zone</h2>
+
+        <p className="my-3 text-body leading-relaxed text-ink-muted">
           Deleting your account is permanent. Your personal data is removed,
           but your questions and answers remain attributed to a deleted user.
         </p>
+
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white"
+          className="ah-btn-danger-outline"
         >
           Delete account
         </button>
@@ -398,12 +450,12 @@ export default function SettingsPage() {
         title="Delete your account?"
       >
         <form onSubmit={deleteAccount} className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-body text-ink-muted">
             This action cannot be undone.
           </p>
 
           <div>
-            <label htmlFor="delete-confirmation" className="mb-1 block text-sm font-medium">
+            <label htmlFor="delete-confirmation" className="ah-label">
               {user.has_password
                 ? 'Enter your password to confirm'
                 : 'Type DELETE to confirm'}
@@ -415,28 +467,29 @@ export default function SettingsPage() {
               value={deleteConfirmation}
               onChange={(event) => setDeleteConfirmation(event.target.value)}
               autoComplete={user.has_password ? 'current-password' : 'off'}
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              aria-invalid={Boolean(deleteFieldError)}
+              className="ah-input"
             />
 
             {deleteFieldError && (
-              <p role="alert" className="mt-1 text-sm text-red-600">
+              <p role="alert" className="ah-error">
                 {deleteFieldError}
               </p>
             )}
           </div>
 
           {deleteError && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="ah-error">
               {deleteError}
             </p>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={closeDeleteModal}
               disabled={deleting}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="ah-btn-ghost"
             >
               Cancel
             </button>
@@ -444,7 +497,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={!canDelete || deleting}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="ah-btn-danger"
             >
               {deleting ? 'Deleting…' : 'Delete permanently'}
             </button>

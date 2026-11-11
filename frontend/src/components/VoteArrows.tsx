@@ -52,15 +52,9 @@ export default function VoteArrows({
     }
   }
 
-  function arrowClass(active: boolean) {
-    if (disabled) return 'ah-vote-btn cursor-not-allowed opacity-40'
-    if (active) return 'ah-vote-btn ah-vote-btn-active'
-    return 'ah-vote-btn hover:border-accent hover:text-accent'
-  }
-
   return (
     <div
-      className="flex flex-col items-center gap-1"
+      className="inline-flex items-center gap-2"
       title={disabled ? disabledReason : undefined}
     >
       <button
@@ -69,22 +63,24 @@ export default function VoteArrows({
         aria-pressed={current.my_vote === 1}
         disabled={disabled}
         onClick={() => void vote(1)}
-        className={arrowClass(current.my_vote === 1)}
+        className={`ah-vote-btn ${current.my_vote === 1 ? 'ah-vote-btn-up' : ''}`}
       >
-        ▲
+        <span aria-hidden="true" className="text-[11px]">▲</span>
+        Useful
+        <span aria-hidden="true" className="opacity-50">·</span>
+        <span className="tabular-nums" aria-label={`${current.vote_total} votes`}>
+          {current.vote_total}
+        </span>
       </button>
-      <span className="text-[18px] font-bold tabular-nums text-ink">
-        {current.vote_total}
-      </span>
       <button
         type="button"
         aria-label="Downvote"
         aria-pressed={current.my_vote === -1}
         disabled={disabled}
         onClick={() => void vote(-1)}
-        className={arrowClass(current.my_vote === -1)}
+        className={`ah-vote-btn w-11 px-0 lg:w-[38px] ${current.my_vote === -1 ? 'ah-vote-btn-down' : ''}`}
       >
-        ▼
+        <span aria-hidden="true" className="text-[11px]">▼</span>
       </button>
     </div>
   )

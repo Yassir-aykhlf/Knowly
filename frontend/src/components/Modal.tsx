@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 
+import NavIcon from './NavIcon'
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -26,7 +28,7 @@ export default function Modal({ open, onClose, title, children }: Props) {
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg backdrop:bg-black/40"
+      className="ah-dialog"
       onCancel={(event) => {
         event.preventDefault()
         onClose()
@@ -43,8 +45,10 @@ export default function Modal({ open, onClose, title, children }: Props) {
       }}
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
-        <button type="button" aria-label="Close dialog" onClick={onClose}>×</button>
+        <h2 id={titleId} className="ah-h3">{title}</h2>
+        <button type="button" aria-label="Close dialog" onClick={onClose} className="ah-icon-btn -mr-2">
+          <NavIcon name="close" size={18} />
+        </button>
       </div>
       {children}
     </dialog>

@@ -1,135 +1,97 @@
-import { Link } from 'react-router-dom';
-import Avatar from './Avatar';
-import { relativeTime } from '../lib/format';
-import type { QuestionListItem } from '../lib/types';
+import type { ReactNode } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+
+import Avatar from './Avatar'
+import { relativeTime } from '../lib/format'
+import type { QuestionListItem } from '../lib/types'
+
+type CardQuestion = Pick<
+  QuestionListItem,
+  | 'id'
+  | 'title'
+  | 'tags'
+  | 'author'
+  | 'vote_total'
+  | 'answer_count'
+  | 'view_count'
+  | 'has_accepted_answer'
+  | 'created_at'
+>
 
 type Props = {
-	question: QuestionListItem;
-};
-
-function plural(count: number, word: string): string {
-	return `${count} ${word}${count === 1 ? '' : 's'}`;
+  question: CardQuestion
+  excerpt?: ReactNode
 }
 
-export default function QuestionCard({ question }: Props) {
-	const {
-		id,
-		title,
-		excerpt,
-		tags,
-		author,
-		vote_total,
-		answer_count,
-		view_count,
-		has_accepted_answer,
-		created_at,
-	} = question;
+export function AnswerStatus({
+  count,
+  accepted,
+}: {
+  count: number
+  accepted: boolean
+}) {
+  if (accepted) {
+    return (
+      <span className="ah-status ah-status-accepted">
+        <span aria-hidden="true">✓</span>
+        {count} {count === 1 ? 'answer' : 'answers'}
+        <span className="sr-only">, one accepted</span>
+      </span>
+    )
+  }
+  if (count === 0) return <span className="ah-status ah-status-warn">Unanswered</span>
+  return (
+    <span className="ah-status">
+      {count} {count === 1 ? 'answer' : 'answers'}
+    </span>
+  )
+}
 
-	return (
-		<article className="flex gap-[18px] border-b border-line4 px-[6px] py-5 text-left transition-colors hover:bg-surface-raised">
-			{/* Stats */}
-			<ul className="m-0 flex w-[62px] shrink-0 list-none flex-col items-end gap-[10px] p-0 pt-[2px]">
-				<li className="flex flex-col items-end leading-[1.1]">
-					<span className="text-[16px] font-bold text-ink">
-						{vote_total}
-					</span>
-					<span className="text-[11px] text-ink-ghost">
-						{vote_total === 1 ? 'vote' : 'votes'}
-					</span>
-				</li>
+export default function QuestionCard({ question, excerpt }: Props) {
+  const location = useLocation()
+  const { id, title, tags, author, vote_total, answer_count, view_count, has_accepted_answer, created_at } =
+    question
 
-				{answer_count > 2 ?
-					<li
-						className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
-							? 'rounded-[7px] border  border-accent px-[7px] py-[3px] text-accent'
-							: 'text-ink-faint'
-							}`}
-						title={has_accepted_answer ? 'Has an accepted answer' : undefined}
-					>
-						<span className="text-sm font-bold">
-							{has_accepted_answer && <span aria-hidden="true">✓ </span>}
-							{answer_count}
-						</span>
-						<span className="text-[11px] opacity-80">
-							{answer_count === 1 ? 'answer' : 'answers'}
-						</span>
-						{has_accepted_answer ?
-							(<span className="sr-only">Has an accepted answer</span>) :
-							(<span className="sr-only">Has no accepted answer yet</span>)
-						}
-					</li>
-					:
-					<li
-						className={`flex flex-col items-end leading-[1.1] ${has_accepted_answer
-							? 'rounded-[7px] border  border-gray px-[7px] py-[3px] text-gray'
-							: 'text-ink-faint'
-							}`}
-						title={has_accepted_answer ? 'Has an accepted answer' : undefined}
-					>
-						<span className="text-sm font-bold">
-							{has_accepted_answer && <span aria-hidden="true">✓ </span>}
-							{answer_count}
-						</span>
-						<span className="text-[11px] opacity-80">
-							{answer_count === 1 ? 'answer' : 'answers'}
-						</span>
-						{has_accepted_answer ?
-							(<span className="sr-only">Has an accepted answer</span>) :
-							(<span className="sr-only">Has no accepted answer yet</span>)
-						}
-					</li>
-				}
+  return (
+    <article className="ah-card ah-card-hover relative flex h-full flex-col gap-2.5 p-4 lg:p-[18px]">
+      <div className="flex min-w-0 items-center gap-2 text-meta text-ink-faint">
+        <Avatar user={author} size={20} />
+        <span className="truncate font-medium text-ink-soft">{author.username}</span>
+        <time dateTime={created_at} className="shrink-0">
+          · {relativeTime(created_at)}
+        </time>
+      </div>
 
-				<li className="text-right text-[11px] text-ink-ghost">
-					{plural(view_count, 'view')}
-				</li>
-			</ul>
+      <h3 className="break-words text-[15.5px] font-semibold leading-[1.4] tracking-[-0.01em] text-ink">
+        <Link
+          to={`/questions/${id}`}
+          state={{ from: `${location.pathname}${location.search}` }}
+          className="text-inherit no-underline after:absolute after:inset-0 after:rounded-2xl hover:text-accent-dark focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-accent"
+        >
+          {title}
+        </Link>
+      </h3>
 
-			{/* Main content */}
-			<div className="min-w-0 flex-1">
-				<h2 className="mb-[6px] mt-0 text-title-sm font-semibold text-ink">
-					<Link
-						to={`/questions/${id}`}
-						className="rounded-sm text-inherit no-underline hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-					>
-						{title}
-					</Link>
-				</h2>
+      {excerpt && (
+        <p className="line-clamp-2 break-words text-body leading-[1.55] text-ink-muted">{excerpt}</p>
+      )}
 
-				<p className="mb-3 mt-0 line-clamp-2 text-body leading-[1.55] text-ink-muted">
-					{excerpt}
-				</p>
-
-				<div className="flex flex-wrap items-center justify-between gap-[10px]">
-					{tags.length > 0 && (
-						<ul
-							className="m-0 flex list-none flex-wrap gap-[6px] p-0"
-							aria-label="Tags"
-						>
-							{tags.map((tag) => (
-								<li
-									key={tag}
-									className="ah-tag"
-								>
-									{tag}
-								</li>
-							))}
-						</ul>
-					)}
-
-					<div className="ml-auto flex flex-wrap items-center gap-2 text-[12.5px] text-ink-faint">
-						<span className="inline-flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full [&>*]:size-full [&_img]:object-cover">
-							<Avatar user={author} />
-						</span>
-
-						<span className="font-medium text-[#46544F]">
-							{author.username}
-						</span>
-
-						<span>· {relativeTime(created_at)}</span>
-					</div>
-				</div>
-			</div>
-		</article>
-	);
+      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1 text-meta text-ink-faint">
+        <AnswerStatus count={answer_count} accepted={has_accepted_answer} />
+        <span className="whitespace-nowrap">
+          <span aria-hidden="true">▲ </span>
+          {vote_total}
+          <span className="sr-only"> {vote_total === 1 ? 'vote' : 'votes'}</span>
+        </span>
+        <span className="whitespace-nowrap">
+          {view_count} {view_count === 1 ? 'view' : 'views'}
+        </span>
+        {tags.length > 0 && (
+          <span className="min-w-0 truncate font-mono text-[11px]" aria-label={`Tags: ${tags.join(', ')}`}>
+            {tags.join(' · ')}
+          </span>
+        )}
+      </div>
+    </article>
+  )
 }

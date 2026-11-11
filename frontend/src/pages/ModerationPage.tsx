@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 
 import MarkdownBody from '../components/MarkdownBody'
 import Modal from '../components/Modal'
+import { EmptyState } from '../components/StateBlocks'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { api, ApiError } from '../lib/api'
@@ -13,7 +14,7 @@ const labels = { question: 'Question', answer: 'Answer', comment: 'Comment' }
 
 export default function ModerationPage() {
   const { user, isLoading } = useAuth()
-  if (isLoading) return <p className="px-4 py-8 text-sm text-slate-500">Checking access…</p>
+  if (isLoading) return <p className="ah-page text-body text-ink-muted" role="status">Checking access…</p>
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== 'admin') return <Navigate to="/403" replace />
   return <ModerationQueue key={user.id} />
@@ -131,62 +132,70 @@ function ModerationQueue() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="ah-page max-w-[940px] space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold">Moderation queue</h1>
-          <p className="mt-1 text-sm text-slate-500">Review pending content, oldest first.</p>
+          <h1 ref={heading} tabIndex={-1} className="ah-h1 focus:outline-none">Moderation queue</h1>
+          <p className="ah-lead mt-2.5">
+            Review pending content, oldest first
+            {items !== null && <> · <span className="font-semibold text-warn">{items.length} pending</span></>}
+          </p>
         </div>
         <button type="button" onClick={() => void loadQueue()} disabled={refreshing || busy !== null}
-          className="rounded-md border px-3 py-2 text-sm disabled:opacity-50">Refresh queue</button>
+          className="ah-btn-secondary ah-btn-sm">Refresh queue</button>
       </header>
-      {refreshing && <p role="status" className="text-sm text-slate-500">{items === null ? 'Loading queue…' : 'Refreshing queue…'}</p>}
-      {loadError && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-        {loadError}{' '}<button type="button" onClick={() => void loadQueue()} disabled={refreshing || busy !== null} className="underline disabled:opacity-50">Retry loading</button>
+
+      {refreshing && <p role="status" className="text-body-sm text-ink-faint">{items === null ? 'Loading queue…' : 'Refreshing queue…'}</p>}
+      {loadError && <p role="alert" className="ah-alert">
+        {loadError}{' '}<button type="button" onClick={() => void loadQueue()} disabled={refreshing || busy !== null} className="font-semibold underline disabled:opacity-50">Retry loading</button>
       </p>}
-      {items?.length === 0 && !refreshing && !loadError && <p className="rounded-lg border p-6 text-slate-500">Nothing to review.</p>}
-      <div className="space-y-4">
+      {items?.length === 0 && !refreshing && !loadError && (
+        <EmptyState title="Nothing to review">New submissions that need a decision will show up here.</EmptyState>
+      )}
+
+      <div className="space-y-3">
         {items?.map((item) => (
           <article key={`${item.type}:${item.id}`} aria-label={`${labels[item.type]} by ${item.author.username}`}
-            aria-busy={busy === `${item.type}:${item.id}`} className="space-y-3 rounded-lg border bg-white p-5">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">{labels[item.type]}</span>
-              <Link to={`/users/${item.author.id}`} className="text-accent hover:underline">{item.author.username}</Link>
-              <time dateTime={item.created_at} title={new Date(item.created_at).toLocaleString()} className="text-xs text-slate-500">{relativeTime(item.created_at)}</time>
+            aria-busy={busy === `${item.type}:${item.id}`} className="ah-card space-y-3.5 p-4 lg:p-5">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-body-sm">
+              <span className="ah-status ah-status-warn">{labels[item.type]}</span>
+              <Link to={`/users/${item.author.id}`} className="ah-link font-semibold">{item.author.username}</Link>
+              <time dateTime={item.created_at} title={new Date(item.created_at).toLocaleString()} className="text-meta text-ink-faint">{relativeTime(item.created_at)}</time>
             </div>
-            {item.title && <h2 className="break-words text-lg font-semibold">{item.title}</h2>}
-            <MarkdownBody markdown={item.body} />
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              <span className="font-medium">Automated review: </span>{item.moderation_note || 'No automated explanation available.'}
+            {item.title && <h2 className="break-words text-[17px] font-semibold leading-snug text-ink">{item.title}</h2>}
+            <MarkdownBody markdown={item.body} compact />
+            <div className="rounded-btn bg-warn-wash px-3.5 py-3 text-body-sm leading-relaxed text-warn-ink">
+              <span className="font-semibold">Automated review: </span>{item.moderation_note || 'No automated explanation available.'}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {item.question_id ? <Link to={`/questions/${item.question_id}`} className="text-sm text-accent hover:underline">View question context</Link>
-                : <span className="text-sm text-slate-500">Question context unavailable</span>}
+              {item.question_id ? <Link to={`/questions/${item.question_id}`} className="ah-link text-body-sm">View question context</Link>
+                : <span className="text-body-sm text-ink-faint">Question context unavailable</span>}
               <div className="flex gap-2">
                 <button type="button" onClick={() => void decide(item, 'approve')} disabled={busy !== null || refreshing}
-                  className="rounded-md bg-accent px-3 py-2 text-sm text-white disabled:opacity-50">Approve</button>
+                  className="ah-btn-primary ah-btn-sm">Approve</button>
                 <button type="button" onClick={() => { setRejecting(item); setNote(''); setTouched(false); setServerError('') }} disabled={busy !== null || refreshing}
-                  className="rounded-md border border-red-200 px-3 py-2 text-sm text-red-700 disabled:opacity-50">Reject</button>
+                  className="ah-btn ah-btn-sm border border-danger-line bg-surface text-danger hover:bg-danger-wash">Reject</button>
               </div>
             </div>
           </article>
         ))}
       </div>
+
       <Modal open={rejecting !== null} onClose={closeReject} title="Reject content">
-        <form ref={form} tabIndex={-1} onSubmit={submitRejection} onKeyDown={trapFocus} aria-label="Rejection explanation" className="space-y-3">
-          <p className="text-sm text-slate-600">Explain the decision to the author of this {rejecting?.type}. A reason is required.</p>
-          <label htmlFor="rejection-note" className="block text-sm font-medium">Reason for rejection</label>
+        <form ref={form} tabIndex={-1} onSubmit={submitRejection} onKeyDown={trapFocus} aria-label="Rejection explanation" className="space-y-3 focus:outline-none">
+          <p className="text-body text-ink-muted">Explain the decision to the author of this {rejecting?.type}. A reason is required.</p>
+          <label htmlFor="rejection-note" className="ah-label mb-0">Reason for rejection</label>
           <textarea ref={noteInput} id="rejection-note" value={note} rows={4} disabled={busy !== null}
             onChange={(event) => { setNote(event.target.value); setTouched(true); setServerError('') }} onBlur={() => setTouched(true)}
             aria-invalid={Boolean(shownError)} aria-describedby="rejection-note-feedback"
-            className="w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50" />
-          <div id="rejection-note-feedback" className="flex justify-between gap-3 text-xs">
-            <span className="text-red-700">{shownError || 'Use 1–1,000 characters.'}</span>
-            <span className="shrink-0 text-slate-500">{length} / 1,000</span>
+            className="ah-textarea" />
+          <div id="rejection-note-feedback" className="flex justify-between gap-3 text-meta">
+            <span className={shownError ? 'text-danger' : 'text-ink-faint'}>{shownError || 'Use 1–1,000 characters.'}</span>
+            <span className="shrink-0 tabular-nums text-ink-faint">{length} / 1,000</span>
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={closeReject} disabled={busy !== null} className="rounded-md border px-3 py-2 text-sm disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={busy !== null || Boolean(noteError)} className="rounded-md bg-red-700 px-3 py-2 text-sm text-white disabled:opacity-50">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={closeReject} disabled={busy !== null} className="ah-btn-ghost">Cancel</button>
+            <button type="submit" disabled={busy !== null || Boolean(noteError)} className="ah-btn-danger">
               {busy !== null ? 'Saving…' : 'Reject content'}
             </button>
           </div>

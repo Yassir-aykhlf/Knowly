@@ -9,22 +9,27 @@ type Props = {
   createdAt: string
   updatedAt: string
   compact?: boolean
+  avatarSize?: number
+  verb?: string
 }
 
-export default function PostMeta({ author, createdAt, updatedAt, compact = false }: Props) {
+export default function PostMeta({ author, createdAt, updatedAt, compact = false, avatarSize = 20, verb }: Props) {
   const edited = new Date(updatedAt).getTime() > new Date(createdAt).getTime()
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-meta text-ink-faint">
-      {!compact && <Avatar user={author} size={20} />}
+    <span className={`inline-flex flex-wrap items-center gap-x-1.5 text-ink-faint ${compact ? 'text-meta' : 'text-body-sm'}`}>
+      {!compact && <Avatar user={author} size={avatarSize} />}
       {author.is_anonymized ? (
-        <span>{author.username}</span>
+        <span className="font-medium">{author.username}</span>
       ) : (
-        <Link to={`/users/${author.id}`} className="font-medium text-[#46544F] hover:underline">
+        <Link to={`/users/${author.id}`} className="font-semibold text-ink-soft hover:text-accent-dark hover:underline">
           {author.username}
         </Link>
       )}
-      <span>· {relativeTime(createdAt)}</span>
+      <span>
+        · {verb ? `${verb} ` : ''}
+        {relativeTime(createdAt)}
+      </span>
       {edited && <span title={`Edited ${relativeTime(updatedAt)}`}>· edited</span>}
     </span>
   )

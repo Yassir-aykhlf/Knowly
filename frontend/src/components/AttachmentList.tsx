@@ -57,7 +57,7 @@ export default function AttachmentList({ items, onDelete, beginOperation, disabl
           const isImage = item.mime_type.startsWith('image/')
           const imageKey = `${item.id}:${item.url}`
           return (
-            <li key={item.id} className="rounded-btn border border-line bg-surface px-3 py-3">
+            <li key={item.id} className="rounded-xl border border-line bg-surface px-3 py-3">
               {isImage && !brokenImages.has(imageKey) && (
                 <a href={item.url} target="_blank" rel="noreferrer" aria-label={`Open image ${item.original_filename}`}>
                   <img src={item.url} alt={item.original_filename} loading="lazy"
@@ -70,14 +70,14 @@ export default function AttachmentList({ items, onDelete, beginOperation, disabl
               )}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <a href={item.url} download={item.original_filename} className="break-all text-accent hover:underline">
+                  <a href={item.url} download={item.original_filename} className="break-all font-medium text-accent-dark hover:underline">
                     {item.original_filename}
                   </a>
                   <span className="ml-2 whitespace-nowrap text-meta text-ink-faint">{fileSize(item.size_bytes)}</span>
                 </div>
                 {onDelete && (
                   <button type="button" disabled={disabled} aria-label={`Delete ${item.original_filename}`}
-                    onClick={() => void remove(item)} className="shrink-0 text-ink-muted hover:text-red-600 disabled:opacity-50">
+                    onClick={() => void remove(item)} className="shrink-0 font-medium text-ink-faint hover:text-danger disabled:opacity-50">
                     Remove
                   </button>
                 )}

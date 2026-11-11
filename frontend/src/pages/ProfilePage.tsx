@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 
 import AddFriendButton from '../components/AddFriendButton'
 import Avatar from '../components/Avatar'
+import Pager from '../components/Pager'
 import QuestionCard from '../components/QuestionCard'
+import { EmptyState, ErrorState, SkeletonCards } from '../components/StateBlocks'
 import { useAuth } from '../contexts/AuthContext'
 import { api, ApiError } from '../lib/api'
 import type {
@@ -108,15 +110,23 @@ export default function ProfilePage() {
   }
 
   if (profileLoading) {
-    return <p className="p-8 text-slate-500">Loading profile…</p>
+    return (
+      <div className="ah-page max-w-[980px]" role="status" aria-label="Loading profile">
+        <div className="ah-card flex items-center gap-5 rounded-[18px] p-6">
+          <div className="ah-skeleton h-20 w-20 shrink-0 rounded-full" />
+          <div className="flex flex-1 flex-col gap-3">
+            <div className="ah-skeleton h-7 w-48 max-w-full" />
+            <div className="ah-skeleton h-4 w-32" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-4xl p-8">
-        <p role="alert" className="text-red-600">
-          {error ?? 'User not found.'}
-        </p>
+      <div className="ah-page max-w-[980px]">
+        <ErrorState title="Profile unavailable" message={error ?? 'User not found.'} />
       </div>
     )
   }
@@ -127,163 +137,151 @@ export default function ProfilePage() {
     1,
     Math.ceil((currentList?.total ?? 0) / PAGE_SIZE),
   )
+  const stats: [string, number, boolean][] = [
+    ['Questions', profile.question_count, false],
+    ['Answers', profile.answer_count, false],
+    ['Accepted', profile.accepted_answer_count, true],
+  ]
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <div className="flex flex-wrap items-start gap-4">
-          <Avatar user={profile} size={72} />
+    <div className="flex flex-1 flex-col">
+      <div className="ah-page max-w-[980px] space-y-6">
+        <section className="ah-card rounded-[18px] p-4 lg:p-6">
+          <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-4 gap-y-4 sm:grid-cols-[80px_minmax(0,1fr)_auto] sm:gap-x-5">
+            <span className="sm:hidden"><Avatar user={profile} size={64} /></span>
+            <span className="hidden sm:block"><Avatar user={profile} size={80} /></span>
 
-          <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl font-semibold">
-              {profile.username}
-            </h1>
+            <div className="min-w-0">
+              <h1 className="break-words font-display text-[26px] font-bold leading-tight tracking-[-0.02em] text-ink lg:text-[30px]">
+                {profile.username}
+              </h1>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Joined {new Date(profile.created_at).toLocaleDateString()}
-            </p>
-
-            {!profile.is_anonymized && profile.bio && (
-              <p className="mt-3 whitespace-pre-wrap break-words text-slate-700">
-                {profile.bio}
+              <p className="mt-1 text-body-sm text-ink-faint">
+                Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </p>
-            )}
-          </div>
 
-          {isOwnProfile ? (
-            <Link
-              to="/settings"
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium"
-            >
-              Edit profile
-            </Link>
-          ) : !profile.is_anonymized ? (
-            <AddFriendButton
-              userId={profile.id}
-              friendship={profile.friendship}
-            />
-          ) : null}
-        </div>
-
-        <div className="mt-6 grid grid-cols-3 gap-3 border-t border-slate-200 pt-5">
-          {[
-            ['Questions', profile.question_count],
-            ['Answers', profile.answer_count],
-            ['Accepted', profile.accepted_answer_count],
-          ].map(([label, count]) => (
-            <div key={label} className="text-center">
-              <p className="text-xl font-semibold">{count}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+              {!profile.is_anonymized && profile.bio && (
+                <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-[1.6] text-ink-soft">
+                  {profile.bio}
+                </p>
+              )}
             </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <div className="mb-5 flex gap-2 border-b border-slate-200 pb-3">
-          <button
-            type="button"
-            onClick={() => changeTab('questions')}
-            aria-pressed={tab === 'questions'}
-            className={`rounded-md px-4 py-2 text-sm ${
-              tab === 'questions'
-                ? 'bg-accent font-semibold text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Questions
-          </button>
-
-          <button
-            type="button"
-            onClick={() => changeTab('answers')}
-            aria-pressed={tab === 'answers'}
-            className={`rounded-md px-4 py-2 text-sm ${
-              tab === 'answers'
-                ? 'bg-accent font-semibold text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Answers
-          </button>
-        </div>
-
-        {error && (
-          <p role="alert" className="mb-4 text-sm text-red-600">
-            {error}
-          </p>
-        )}
-
-        {listLoading ? (
-          <p className="text-sm text-slate-500">Loading…</p>
-        ) : tab === 'questions' ? (
-          questions?.items.length ? (
-            <div>
-              {questions.items.map((question) => (
-                <QuestionCard key={question.id} question={question} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">
-              No questions to display.
-            </p>
-          )
-        ) : answers?.items.length ? (
-          <div className="divide-y divide-slate-200">
-            {answers.items.map((answer) => (
-              <article key={answer.id} className="py-4">
-                <Link
-                  to={`/questions/${answer.question_id}`}
-                  className="font-semibold text-accent hover:underline"
-                >
-                  {answer.question_title}
+            <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
+              {isOwnProfile ? (
+                <Link to="/settings" className="ah-btn-secondary">
+                  Edit profile
                 </Link>
+              ) : !profile.is_anonymized ? (
+                <>
+                  <Link to={`/messages/${profile.id}`} className="ah-btn-secondary">
+                    Message
+                  </Link>
+                  <AddFriendButton
+                    userId={profile.id}
+                    friendship={profile.friendship}
+                  />
+                </>
+              ) : null}
+            </div>
+          </div>
 
-                <p className="mt-2 text-sm text-slate-600">
-                  {answer.excerpt}
-                </p>
-
-                <p className="mt-2 text-xs text-slate-500">
-                  {answer.vote_total} votes
-                  {answer.is_accepted ? ' · Accepted answer' : ''}
-                  {' · '}
-                  {new Date(answer.created_at).toLocaleDateString()}
-                </p>
-              </article>
+          <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-line4 pt-5">
+            {stats.map(([label, count, highlight]) => (
+              <div key={label} className="flex flex-col-reverse">
+                <dt className="text-[12.5px] text-ink-faint">{label}</dt>
+                <dd className={`font-display text-[26px] font-bold leading-tight tabular-nums ${highlight ? 'text-accent-dark' : 'text-ink'}`}>
+                  {count}
+                </dd>
+              </div>
             ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">
-            No answers to display.
-          </p>
-        )}
+          </dl>
+        </section>
 
-        {!listLoading && currentList && totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t pt-4">
+        <section>
+          <div className="mb-4 flex gap-2" role="group" aria-label="Profile content">
             <button
               type="button"
-              disabled={page === 1}
-              onClick={() => setPage((previous) => previous - 1)}
-              className="rounded-md border px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() => changeTab('questions')}
+              aria-pressed={tab === 'questions'}
+              className={`ah-pill ${tab === 'questions' ? 'ah-pill-active' : ''}`}
             >
-              Previous
+              Questions
             </button>
-
-            <span className="text-sm text-slate-500">
-              Page {page} of {totalPages}
-            </span>
 
             <button
               type="button"
-              disabled={page >= totalPages}
-              onClick={() => setPage((previous) => previous + 1)}
-              className="rounded-md border px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() => changeTab('answers')}
+              aria-pressed={tab === 'answers'}
+              className={`ah-pill ${tab === 'answers' ? 'ah-pill-active' : ''}`}
             >
-              Next
+              Answers
             </button>
           </div>
-        )}
-      </section>
+
+          {error && (
+            <p role="alert" className="ah-alert mb-4">
+              {error}
+            </p>
+          )}
+
+          {listLoading ? (
+            <SkeletonCards count={3} className="grid gap-3" />
+          ) : tab === 'questions' ? (
+            questions?.items.length ? (
+              <ul className="grid gap-3">
+                {questions.items.map((question) => (
+                  <li key={question.id} className="min-w-0">
+                    <QuestionCard question={question} excerpt={question.excerpt} />
+                  </li>
+                ))}
+              </ul>
+            ) : !error ? (
+              <EmptyState title="No questions to display">
+                {isOwnProfile ? 'Questions you ask will show up here.' : 'This member hasn\u2019t asked anything yet.'}
+              </EmptyState>
+            ) : null
+          ) : answers?.items.length ? (
+            <ul className="grid gap-3">
+              {answers.items.map((answer) => (
+                <li key={answer.id} className="min-w-0">
+                  <article className="ah-card ah-card-hover relative flex flex-col gap-2 p-4 lg:p-[18px]">
+                    <h3 className="break-words text-[15.5px] font-semibold leading-[1.4] tracking-[-0.01em] text-ink">
+                      <Link
+                        to={`/questions/${answer.question_id}`}
+                        className="text-inherit no-underline after:absolute after:inset-0 after:rounded-2xl hover:text-accent-dark"
+                      >
+                        {answer.question_title}
+                      </Link>
+                    </h3>
+
+                    <p className="line-clamp-2 break-words text-body leading-[1.55] text-ink-muted">
+                      {answer.excerpt}
+                    </p>
+
+                    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-meta text-ink-faint">
+                      {answer.is_accepted ? (
+                        <span className="ah-status ah-status-accepted"><span aria-hidden="true">✓</span> Accepted answer</span>
+                      ) : (
+                        <span className="ah-status">Answer</span>
+                      )}
+                      <span><span aria-hidden="true">▲ </span>{answer.vote_total}<span className="sr-only"> votes</span></span>
+                      <span>{new Date(answer.created_at).toLocaleDateString()}</span>
+                    </p>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          ) : !error ? (
+            <EmptyState title="No answers to display">
+              {isOwnProfile ? 'Answers you post will show up here.' : 'This member hasn\u2019t answered anything yet.'}
+            </EmptyState>
+          ) : null}
+        </section>
+      </div>
+      {!listLoading && currentList && (
+        <Pager page={page} totalPages={totalPages} onChange={setPage} label="Profile pagination" />
+      )}
     </div>
   )
 }

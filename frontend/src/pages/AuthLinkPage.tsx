@@ -61,49 +61,31 @@ export default function AuthLinkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            Knowly
-          </p>
+    <div>
+      <h1 className="font-display text-[30px] font-bold leading-tight tracking-[-0.03em] text-ink">
+        Link your Google account
+      </h1>
+      <p className="ah-lead mt-2">
+        An account with this email already exists.
+        Confirm your password to link Google to it.
+      </p>
 
-          <h1 className="mt-2 text-2xl font-semibold">
-            Link your Google account
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            An account with this email already exists.
-            Confirm your password to link Google to it.
-          </p>
-        </div>
-
+      <div className="mt-7 space-y-4">
         {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <div role="alert" className="ah-alert">
             {error}
           </div>
         )}
 
         {isExpired ? (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-body text-ink-muted">
               Please start Google sign-in again.
             </p>
-
-            <a
-              href="/api/auth/google"
-              className="block w-full rounded-md bg-accent px-4 py-2 text-center text-sm font-semibold text-white"
-            >
+            <a href="/api/auth/google" className="ah-btn-primary h-[46px] w-full rounded-[11px] lg:h-[46px]">
               Start again with Google
             </a>
-
-            <Link
-              to="/login"
-              className="block text-center text-sm text-accent hover:underline"
-            >
+            <Link to="/login" className="ah-link block text-center text-body">
               Back to sign in
             </Link>
           </div>
@@ -111,20 +93,16 @@ export default function AuthLinkPage() {
           <>
             <form onSubmit={handleLink} className="space-y-4">
               <div>
-                <label
-                  htmlFor="link-password"
-                  className="mb-1 block text-sm font-medium"
-                >
+                <label htmlFor="link-password" className="ah-label">
                   Your Knowly password
                 </label>
-
                 <input
                   id="link-password"
                   type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="ah-input"
                   required
                 />
               </div>
@@ -132,7 +110,7 @@ export default function AuthLinkPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || isCancelling}
-                className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="ah-btn-primary h-[46px] w-full rounded-[11px] lg:h-[46px]"
               >
                 {isSubmitting ? 'Linking…' : 'Link Google account'}
               </button>
@@ -142,7 +120,7 @@ export default function AuthLinkPage() {
               type="button"
               onClick={handleCancel}
               disabled={isSubmitting || isCancelling}
-              className="mt-4 w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+              className="ah-btn-secondary h-[46px] w-full rounded-[11px] lg:h-[46px]"
             >
               {isCancelling ? 'Cancelling…' : 'Cancel'}
             </button>

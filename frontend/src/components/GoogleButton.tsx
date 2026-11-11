@@ -3,7 +3,7 @@ export default function GoogleButton() {
   return (
     <a
       href="/api/auth/google"
-      className="flex w-full items-center justify-center gap-3 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      className="ah-btn-secondary h-[46px] w-full gap-3 rounded-[11px] lg:h-[46px]"
     >
       <svg
         aria-hidden="true"

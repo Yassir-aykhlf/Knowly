@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { ApiError } from '../lib/api'
 
@@ -14,6 +14,11 @@ type Props = {
   onCancel?: () => void
   resetOnSuccess?: boolean
   autoFocus?: boolean
+  label?: string
+  // Rendered between the text area and the buttons (e.g. attachments).
+  children?: ReactNode
+  // Extra buttons rendered after submit / cancel.
+  extraActions?: ReactNode
 }
 
 export default function EditBox({
@@ -28,6 +33,9 @@ export default function EditBox({
   onCancel,
   resetOnSuccess = false,
   autoFocus = false,
+  label,
+  children,
+  extraActions,
 }: Props) {
   const [value, setValue] = useState(initial)
   const [touched, setTouched] = useState(false)
@@ -65,7 +73,7 @@ export default function EditBox({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-2.5">
       <textarea
         value={value}
         rows={rows}
@@ -77,15 +85,17 @@ export default function EditBox({
         }}
         onBlur={() => setTouched(true)}
         aria-invalid={shownError !== null}
-        className="ah-input resize-none font-mono text-body-md"
+        aria-label={label ?? placeholder ?? submitLabel}
+        className="ah-textarea-mono rounded-card"
       />
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-red-600">{shownError}</span>
-        <span className={`tabular-nums ${length > max ? 'text-red-600' : 'text-ink-faint'}`}>
+      <div className="flex items-start justify-between gap-3 text-meta">
+        <span className="text-danger" role={shownError ? 'alert' : undefined}>{shownError}</span>
+        <span className={`shrink-0 tabular-nums ${length > max ? 'text-danger' : 'text-ink-faint'}`}>
           {length.toLocaleString()} / {max.toLocaleString()}
         </span>
       </div>
-      <div className="flex gap-2">
+      {children}
+      <div className="flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={busy || disabled}
@@ -98,11 +108,12 @@ export default function EditBox({
             type="button"
             onClick={onCancel}
             disabled={busy || disabled}
-            className="ah-btn-secondary"
+            className="ah-btn-ghost"
           >
             Cancel
           </button>
         )}
+        {extraActions}
       </div>
     </form>
   )

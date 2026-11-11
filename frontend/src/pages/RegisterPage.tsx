@@ -69,36 +69,51 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            Knowly
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold">Create your account</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Join Knowly and start learning with the community.
-          </p>
-        </div>
+    <div>
+      <h1 className="font-display text-[30px] font-bold leading-tight tracking-[-0.03em] text-ink">Create your account</h1>
+      <p className="ah-lead mt-2">Join Knowly and start learning with the community.</p>
 
+      <div className="mt-7 space-y-4">
         {formError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <div role="alert" className="ah-alert">
             {formError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <GoogleButton />
+
+        <div className="flex items-center gap-3" role="separator">
+          <div className="h-px flex-1 bg-line" />
+          <span className="text-meta text-ink-faint">or with email</span>
+          <div className="h-px flex-1 bg-line" />
+        </div>
+
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
-            <label
-              htmlFor="register-email"
-              className="mb-1 block text-sm font-medium"
-            >
+            <label htmlFor="register-username" className="ah-label">
+              Username
+            </label>
+            <input
+              id="register-username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              placeholder="3–30 letters, numbers, _ or -"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              aria-invalid={Boolean(fieldErrors.username)}
+              className="ah-input"
+              required
+            />
+            {fieldErrors.username && (
+              <p className="ah-error">{fieldErrors.username}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="register-email" className="ah-label">
               Email
             </label>
-
             <input
               id="register-email"
               name="email"
@@ -106,53 +121,19 @@ export default function RegisterPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              aria-invalid={Boolean(fieldErrors.email)}
+              className="ah-input"
               required
             />
-
             {fieldErrors.email && (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+              <p className="ah-error">{fieldErrors.email}</p>
             )}
           </div>
 
           <div>
-            <label
-              htmlFor="register-username"
-              className="mb-1 block text-sm font-medium"
-            >
-              Username
-            </label>
-
-            <input
-              id="register-username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-
-            <p className="mt-1 text-xs text-slate-500">
-              3–30 characters: letters, numbers, _ or -
-            </p>
-
-            {fieldErrors.username && (
-              <p className="mt-1 text-sm text-red-600">
-                {fieldErrors.username}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="register-password"
-              className="mb-1 block text-sm font-medium"
-            >
+            <label htmlFor="register-password" className="ah-label">
               Password
             </label>
-
             <input
               id="register-password"
               name="password"
@@ -160,46 +141,35 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby="register-password-help"
+              className="ah-input"
               required
             />
-
-            <p className="mt-1 text-xs text-slate-500">
+            <p id="register-password-help" className="ah-help">
               8–128 characters, with at least one letter and one digit
             </p>
-
             {fieldErrors.password && (
-              <p className="mt-1 text-sm text-red-600">
-                {fieldErrors.password}
-              </p>
+              <p className="ah-error">{fieldErrors.password}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="ah-btn-primary h-[46px] w-full rounded-[11px] lg:h-[46px]"
           >
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </button>
         </form>
-
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs text-slate-500">OR</span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <GoogleButton />
-
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-accent hover:underline">
-            Sign in
-          </Link>
-        </p>
       </div>
+
+      <p className="mt-7 text-center text-body text-ink-muted">
+        Already have an account?{' '}
+        <Link to="/login" className="ah-link font-semibold">
+          Sign in
+        </Link>
+      </p>
     </div>
   )
 }

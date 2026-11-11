@@ -22,16 +22,44 @@ export default {
           dim: '#8A958F',        // fill_afbc985e – placeholder/ghost
           ghost: '#A4AFAA',      // fill_65c409ab – timestamps
         },
+        'fill-subtle': '#F1F4F2', // segmented / search field fill
+        tag: { DEFAULT: '#EEF2F0', ink: '#46544F' },
         accent: {
           DEFAULT: '#0D9488',
           dark: '#0F766E',
           tint: '#E6F4F1',       // fill used for vote-up bg
-          subtle: 'rgba(13,148,136,0.08)', // nav active bg
+          wash: '#F4FAF8',       // accepted answer / unread bg
+          line: '#B9DDD7',       // card hover border
+          soft: '#CDE7E1',       // unread border
+          subtle: 'rgba(13,148,136,0.08)',
         },
         ai: {
           DEFAULT: '#5B5BD6',    // fill_dd529102
           tint: '#EEF0FB',       // fill_562c99b2
+          wash: '#F8F8FE',
+          line: '#DCDDF6',
+          skeleton: '#E4E6F8',
         },
+        sidebar: {
+          DEFAULT: '#14201D',
+          text: '#A9BAB4',
+          muted: '#8FA39C',
+        },
+        warn: {
+          DEFAULT: '#9A5B0B',
+          ink: '#7A4A09',
+          tint: '#FFF4E0',
+          wash: '#FFF8EB',
+          line: '#F3DDB4',
+        },
+        danger: {
+          DEFAULT: '#B42318',
+          line: '#F1C4C0',
+          wash: '#FFF6F5',
+          tint: '#FDECEC',
+        },
+        online: '#22A06B',
+        offline: '#C2C9C5',
         // avatar palette colours (for badges)
         'badge-blue': '#3F7CAC',   // fill_64dc6d7d
         'badge-green': '#7A8A3F',  // fill_5437f841
@@ -72,6 +100,8 @@ export default {
       boxShadow: {
         pop: '0 18px 50px -28px rgba(16, 23, 19, 0.28)',
         card: '0px 1px 2px 0px rgba(20, 40, 36, 0.06)',
+        seg: '0 1px 2px rgba(20, 40, 36, 0.12)',
+        modal: '0 18px 50px -20px rgba(16, 23, 19, 0.4)',
       },
       spacing: {
         sidebar: '262px',

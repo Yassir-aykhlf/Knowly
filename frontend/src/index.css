@@ -1,6 +1,3 @@
-/* ─── Google Fonts ─────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,127 +13,332 @@
     outline: 2px solid #0d9488;
     outline-offset: 2px;
   }
+  ::selection {
+    background: rgba(13, 148, 136, 0.2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@keyframes ah-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes ah-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes ah-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ah-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer components {
+  /* ── Page scaffolding ──────────────────────────────────────────────────── */
+  .ah-page {
+    @apply mx-auto w-full px-4 pb-10 pt-5 lg:px-10 lg:pb-14 lg:pt-10;
+  }
+  .ah-pager {
+    @apply sticky bottom-0 z-10 mt-auto flex items-center justify-center gap-3 border-t border-line px-4 py-3.5 backdrop-blur-md;
+    background: rgba(247, 249, 248, 0.94);
+    padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
+  }
+
   /* ── Cards ─────────────────────────────────────────────────────────────── */
   .ah-card {
-    @apply rounded-card border border-line bg-surface;
+    @apply rounded-2xl border border-line bg-surface;
   }
-  /* Answer card – accepted variant */
-  .ah-card-accepted {
-    @apply rounded-card border border-accent bg-accent-tint/30;
+  .ah-card-hover {
+    @apply transition-[border-color,box-shadow] hover:border-accent-line hover:shadow-card;
+  }
+  .ah-empty {
+    @apply rounded-card border border-dashed border-line3 px-5 py-10 text-center;
+  }
+  .ah-empty-title {
+    @apply font-display text-[18px] font-semibold tracking-[-0.01em] text-ink;
+  }
+  .ah-empty-text {
+    @apply mt-1.5 text-body text-ink-muted;
+  }
+  .ah-skeleton {
+    @apply rounded-md bg-line4;
+    animation: ah-pulse 1.4s ease-in-out infinite;
   }
 
   /* ── Buttons ─────────────────────────────────────────────────────────── */
   .ah-btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-btn px-4 py-2.5 text-body font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-11 shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-btn px-4 text-body font-semibold no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-50 lg:h-10;
   }
   .ah-btn-primary {
     @apply ah-btn bg-accent text-white hover:bg-accent-dark;
   }
   .ah-btn-secondary {
-    @apply ah-btn border border-line3 bg-surface text-ink hover:bg-canvas;
+    @apply ah-btn border border-line3 bg-surface text-ink hover:border-accent-line hover:bg-accent-wash;
   }
   .ah-btn-ghost {
-    @apply ah-btn text-ink-faint hover:text-ink;
+    @apply ah-btn px-3 text-ink-muted hover:bg-line4 hover:text-ink;
+  }
+  .ah-btn-dark {
+    @apply ah-btn bg-ink text-white hover:bg-ink-strong;
   }
   .ah-btn-ai {
-    @apply ah-btn border border-ai-tint bg-surface text-ai hover:bg-ai-tint;
+    @apply ah-btn border border-ai-line bg-ai-tint text-ai hover:bg-ai-line;
   }
-  /* Vote arrow buttons */
+  .ah-btn-ai-solid {
+    @apply ah-btn bg-ai text-white hover:opacity-90;
+  }
+  .ah-btn-danger {
+    @apply ah-btn bg-danger text-white hover:opacity-90;
+  }
+  .ah-btn-danger-outline {
+    @apply ah-btn border border-danger-line bg-danger-wash text-danger hover:bg-danger-tint;
+  }
+  .ah-btn-sm {
+    @apply h-10 rounded-[9px] px-3 text-body-sm lg:h-9;
+  }
+  .ah-btn-lg {
+    @apply h-[50px] rounded-xl px-6 text-base lg:h-[50px];
+  }
+  .ah-icon-btn {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-btn text-ink-muted transition-colors hover:bg-line4 hover:text-ink lg:h-9 lg:w-9;
+  }
+  .ah-back {
+    @apply inline-flex h-10 items-center gap-1.5 rounded-btn border border-line2 bg-surface pl-2.5 pr-3.5 text-[13.5px] font-semibold text-ink-soft no-underline shadow-card transition-colors hover:border-accent-line hover:bg-accent-wash hover:text-accent-dark lg:h-9;
+  }
+  .ah-text-btn {
+    @apply inline-flex min-h-[32px] items-center rounded-md text-body-sm font-medium text-ink-faint transition-colors hover:text-accent-dark;
+  }
+  .ah-text-btn-danger {
+    @apply ah-text-btn hover:text-danger;
+  }
+
+  /* ── Voting ──────────────────────────────────────────────────────────── */
   .ah-vote-btn {
-    @apply flex h-[38px] w-[38px] items-center justify-center rounded-btn border border-line3 bg-surface text-lg transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-btn border border-line3 bg-surface px-3.5 text-body font-semibold text-ink-soft transition-colors hover:border-accent-line hover:text-accent-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line3 disabled:hover:text-ink-soft lg:h-[38px];
   }
-  .ah-vote-btn-active {
-    @apply border-accent bg-accent-tint text-accent;
+  .ah-vote-btn-up {
+    @apply border-accent bg-accent-tint text-accent-dark;
+  }
+  .ah-vote-btn-down {
+    @apply border-danger-line bg-danger-tint text-danger hover:border-danger-line hover:text-danger;
   }
 
   /* ── Inputs ──────────────────────────────────────────────────────────── */
   .ah-input {
-    @apply w-full rounded-btn border border-line3 bg-surface px-3 py-2.5 text-body text-ink placeholder:text-ink-dim focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+    @apply block h-11 w-full rounded-btn border border-line3 bg-surface px-3 text-base text-ink transition-colors placeholder:text-ink-dim focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:bg-fill-subtle disabled:opacity-70 lg:text-body;
+  }
+  .ah-input[aria-invalid='true'] {
+    @apply border-danger focus:border-danger focus:ring-danger;
   }
   .ah-textarea {
-    @apply ah-input resize-none font-mono text-body-md;
+    @apply ah-input h-auto resize-y py-2.5 leading-relaxed;
+  }
+  .ah-textarea-mono {
+    @apply ah-textarea font-mono text-[14px] leading-[1.6] lg:text-[14px];
+  }
+  .ah-label {
+    @apply mb-1.5 block text-body-sm font-semibold text-ink-soft;
+  }
+  .ah-help {
+    @apply mt-1.5 text-meta text-ink-faint;
+  }
+  .ah-error {
+    @apply mt-1.5 text-body-sm text-danger;
+  }
+  .ah-alert {
+    @apply rounded-btn border border-danger-line bg-danger-wash px-3.5 py-3 text-body-sm text-danger;
+  }
+  .ah-alert-warn {
+    @apply rounded-btn border border-warn-line bg-warn-wash px-3.5 py-3 text-body-sm text-warn-ink;
   }
 
-  /* ── Tags / Chips ─────────────────────────────────────────────────────── */
+  /* ── Tags / pills / badges ────────────────────────────────────────────── */
   .ah-tag {
-    @apply inline-flex rounded-tag bg-[#EEF2F0] px-[9px] py-[3px] font-mono text-tag leading-none text-[#46544F];
+    @apply inline-flex items-center rounded-tag bg-tag px-[9px] py-[3px] font-mono text-tag leading-none text-tag-ink;
   }
-  /* Tag used inside QuestionDetailPage body */
-  .ah-tag-tall {
-    @apply inline-flex rounded-tag bg-[#EEF2F0] px-[10px] py-[4px] font-mono text-tag text-[#46544F];
+  .ah-pill {
+    @apply inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-line3 bg-surface px-3.5 text-body-sm font-medium text-ink-muted transition-colors hover:border-ink-ghost hover:text-ink lg:h-8;
   }
-
-  /* ── Badge pills (accepted / ai-assisted) ─────────────────────────────── */
+  .ah-pill-active {
+    @apply border-ink bg-ink font-semibold text-white hover:border-ink hover:text-white;
+  }
+  .ah-status {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-fill-subtle px-2.5 py-[3px] text-meta font-semibold leading-[18px] text-ink-muted;
+  }
+  .ah-status-accepted {
+    @apply bg-accent-tint text-accent-dark;
+  }
+  .ah-status-warn {
+    @apply bg-warn-tint text-warn;
+  }
+  .ah-count {
+    @apply inline-flex min-w-[20px] items-center justify-center rounded-full bg-accent px-1.5 py-px text-[11px] font-bold leading-[16px] text-white;
+  }
   .ah-badge-accepted {
-    @apply inline-flex items-center gap-1 rounded-badge bg-accent px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-white;
+    @apply inline-flex items-center gap-1 rounded-badge bg-accent px-2.5 py-[3px] font-mono text-2xs font-bold uppercase tracking-[0.02em] text-white;
   }
   .ah-badge-ai {
-    @apply inline-flex items-center gap-1 rounded-badge border border-ai-tint bg-ai-tint px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-ai;
+    @apply inline-flex items-center gap-1 rounded-badge bg-ai-tint px-2.5 py-[3px] font-mono text-2xs font-bold uppercase tracking-[0.02em] text-ai;
+  }
+  .ah-badge-outline {
+    @apply inline-flex cursor-pointer items-center gap-1 rounded-badge border border-line3 px-2.5 py-[2px] font-mono text-2xs font-bold uppercase tracking-[0.02em] text-ink-faint transition-colors hover:border-accent hover:text-accent-dark;
   }
 
-  /* ── Nav sidebar items ─────────────────────────────────────────────────── */
-  .ah-nav-item {
-    @apply flex w-full items-center gap-[9px] rounded-btn px-[11px] py-[9px] text-body text-[#46544F] transition-colors hover:bg-canvas;
+  /* ── Segmented control ─────────────────────────────────────────────────── */
+  .ah-seg {
+    @apply inline-flex rounded-[10px] bg-line4 p-[3px];
   }
-  .ah-nav-item-active {
-    @apply bg-accent-subtle font-semibold text-accent;
+  .ah-seg-item {
+    @apply inline-flex h-9 cursor-pointer items-center rounded-lg px-3.5 text-body-sm font-medium text-ink-muted transition-colors hover:text-ink lg:h-8;
   }
-
-  /* ── Sort tabs ─────────────────────────────────────────────────────────── */
-  .ah-sort-tab {
-    @apply -mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-[13px] py-[9px] text-body font-medium text-ink-faint transition-colors hover:text-ink;
-  }
-  .ah-sort-tab-active {
-    @apply border-accent font-semibold text-accent;
+  .ah-seg-item-active {
+    @apply bg-surface font-semibold text-ink shadow-seg;
   }
 
-  /* ── Links ─────────────────────────────────────────────────────────────── */
+  /* ── Links & typography ────────────────────────────────────────────────── */
   .ah-link {
-    @apply text-accent hover:underline;
+    @apply font-medium text-accent-dark underline-offset-2 hover:underline;
   }
-
-  /* ── Typography ─────────────────────────────────────────────────────────── */
   .ah-h1 {
-    @apply font-display text-display font-bold tracking-[-0.03em] text-ink;
+    @apply text-balance break-words font-display text-[28px] font-bold leading-[1.1] tracking-[-0.03em] text-ink lg:text-[36px];
   }
   .ah-h2 {
-    @apply font-display text-title font-semibold tracking-[-0.02em] text-ink;
+    @apply font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink;
   }
   .ah-h3 {
-    @apply font-display text-heading-sm font-bold text-ink;
+    @apply font-display text-[19px] font-semibold leading-tight tracking-[-0.01em] text-ink;
+  }
+  .ah-lead {
+    @apply text-pretty text-[15px] leading-[1.55] text-ink-muted;
+  }
+  .ah-overline {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint;
   }
 
   /* ── Moderation banners ──────────────────────────────────────────────── */
   .ah-banner-pending {
-    @apply rounded-btn border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800;
+    @apply rounded-btn border border-warn-line bg-warn-wash px-4 py-3 text-body-sm text-warn-ink;
   }
   .ah-banner-rejected {
-    @apply rounded-btn border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800;
+    @apply rounded-btn border border-danger-line bg-danger-wash px-4 py-3 text-body-sm text-danger;
   }
   .ah-banner-pending-compact {
-    @apply rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800;
+    @apply rounded-lg border border-warn-line bg-warn-wash px-2.5 py-1.5 text-meta text-warn-ink;
   }
   .ah-banner-rejected-compact {
-    @apply rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-800;
+    @apply rounded-lg border border-danger-line bg-danger-wash px-2.5 py-1.5 text-meta text-danger;
+  }
+
+  /* ── App shell: dark sidebar ───────────────────────────────────────────── */
+  .ah-side-item {
+    @apply relative grid min-h-[44px] grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 rounded-btn px-3 py-[9px] text-[15px] font-medium text-sidebar-text no-underline transition-colors hover:bg-white/[0.06] hover:text-white lg:min-h-[42px] lg:text-body;
+  }
+  .ah-side-item-active {
+    @apply bg-accent/[0.22] font-semibold text-white hover:bg-accent/[0.22];
+  }
+  .ah-side-item-collapsed {
+    @apply flex justify-center px-0;
+  }
+  .ah-side-btn {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-btn text-sidebar-muted transition-colors hover:bg-white/[0.08] hover:text-white lg:h-9 lg:w-9;
+  }
+  .ah-side-divider {
+    @apply mx-2 my-2.5 h-px bg-white/[0.08];
+  }
+  .ah-kmark {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-btn bg-accent font-display text-[22px] font-bold leading-none text-white;
+  }
+
+  /* ── Dialogs ───────────────────────────────────────────────────────────── */
+  .ah-dialog::backdrop,
+  .ah-drawer::backdrop {
+    background: rgba(20, 32, 29, 0.4);
+    backdrop-filter: blur(3px);
+    animation: ah-fade-in 180ms ease-out;
+  }
+  .ah-dialog {
+    @apply m-auto w-[min(440px,calc(100%-32px))] max-w-none rounded-2xl bg-surface p-5 text-ink shadow-modal sm:p-6;
+  }
+  .ah-dialog[open] {
+    animation: ah-pop-in 180ms ease-out;
+  }
+  .ah-drawer {
+    @apply m-0 h-dvh max-h-none w-[min(18rem,calc(100%-3rem))] max-w-none bg-sidebar p-0 text-white;
+  }
+  .ah-drawer[open] {
+    animation: ah-drawer-in 180ms ease-out;
+  }
+
+  /* ── Chat bubbles ──────────────────────────────────────────────────────── */
+  .ah-bubble-mine {
+    @apply rounded-[14px_14px_4px_14px] bg-accent px-3.5 py-2.5 text-white;
+  }
+  .ah-bubble-theirs {
+    @apply rounded-[14px_14px_14px_4px] border border-line bg-surface px-3.5 py-2.5 text-ink-soft;
+  }
+  .ah-composer {
+    @apply flex items-end gap-2 rounded-2xl border border-line3 bg-surface p-1.5 transition-colors focus-within:border-accent;
+  }
+  .ah-composer textarea {
+    @apply max-h-40 min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-base leading-snug text-ink placeholder:text-ink-dim focus:outline-none disabled:opacity-60 lg:text-body-md;
   }
 }
 
 @layer components {
   /* ── Markdown body ─────────────────────────────────────────────────────── */
   .markdown-doc {
-    @apply leading-relaxed text-ink-soft;
+    @apply break-words text-[15px] leading-[1.7] text-ink-soft lg:text-[15.5px];
+  }
+  .markdown-doc > :first-child {
+    @apply mt-0;
+  }
+  .markdown-doc > :last-child {
+    @apply mb-0;
   }
   .markdown-doc h1 {
-    @apply mb-4 mt-2 font-display text-3xl font-bold tracking-tight;
+    @apply mb-3 mt-6 font-display text-2xl font-bold tracking-tight text-ink;
   }
   .markdown-doc h2 {
-    @apply mb-2 mt-8 font-display text-xl font-semibold;
+    @apply mb-2 mt-6 font-display text-xl font-semibold text-ink;
   }
   .markdown-doc h3 {
-    @apply mb-2 mt-6 font-display text-lg font-semibold;
+    @apply mb-2 mt-5 font-display text-lg font-semibold text-ink;
+  }
+  .markdown-doc h4,
+  .markdown-doc h5,
+  .markdown-doc h6 {
+    @apply mb-1 mt-4 font-semibold text-ink;
   }
   .markdown-doc p {
     @apply my-3;
@@ -148,21 +350,37 @@
     @apply my-3 list-decimal space-y-1 pl-6;
   }
   .markdown-doc a {
-    @apply text-accent underline underline-offset-2;
+    @apply text-accent-dark underline underline-offset-2 hover:text-accent;
   }
-  .markdown-doc em {
-    @apply italic text-ink-muted;
+  .markdown-doc strong {
+    @apply font-semibold text-ink;
   }
   .markdown-doc blockquote {
-    @apply my-3 border-l-2 border-line pl-4 italic text-ink-muted;
+    @apply my-3 border-l-2 border-line3 pl-4 text-ink-muted;
+  }
+  .markdown-doc hr {
+    @apply my-6 border-line;
+  }
+  .markdown-doc img {
+    @apply h-auto max-w-full rounded-lg;
+  }
+  .markdown-doc table {
+    @apply my-3 block max-w-full overflow-x-auto text-body;
+  }
+  .markdown-doc th,
+  .markdown-doc td {
+    @apply border border-line px-3 py-1.5 text-left;
   }
   .markdown-doc code {
-    @apply rounded-tag bg-[#EEF2F0] px-1 py-0.5 font-mono text-[0.85em] text-[#2B3633];
+    @apply rounded-tag bg-tag px-1 py-0.5 font-mono text-[0.85em] text-ink-soft;
   }
   .markdown-doc pre {
-    @apply my-3 overflow-x-auto rounded-card bg-[#14201D] p-4 font-mono text-[13px] leading-relaxed text-[#DBE7E2];
+    @apply my-3 overflow-x-auto rounded-xl bg-sidebar p-4 font-mono text-[13px] leading-relaxed text-[#DBE7E2];
   }
   .markdown-doc pre code {
     @apply bg-transparent p-0 text-inherit;
+  }
+  .markdown-doc-compact {
+    @apply text-body-md leading-[1.6] lg:text-body-md;
   }
 }

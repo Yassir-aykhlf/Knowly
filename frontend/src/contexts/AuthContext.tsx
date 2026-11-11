@@ -25,9 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // `/auth/session` answers 200 with null when nobody is signed in, so probing
+  // it on public pages doesn't log a failed request in the browser console.
   const refresh = useCallback(async () => {
     try {
-      const currentUser = await api.get<User>('/users/me')
+      const currentUser = await api.get<User | null>('/auth/session')
       setUser(currentUser)
     } catch {
       setUser(null)
@@ -38,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true
 
     api
-      .get<User>('/users/me')
+      .get<User | null>('/auth/session')
       .then((currentUser) => {
         if (active) {
           setUser(currentUser)

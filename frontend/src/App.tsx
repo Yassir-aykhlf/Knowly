@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 
 import AppLayout from './layouts/AppLayout'
 import PublicLayout from './layouts/PublicLayout'
+import AuthLayout from './layouts/AuthLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import LandingPage from './pages/LandingPage'
@@ -20,9 +21,9 @@ import AskPage from './pages/AskPage'
 import ProfilePage from './pages/ProfilePage'
 import FriendsPage from './pages/FriendsPage'
 import SettingsPage from './pages/SettingsPage'
-import MessagesPage from './pages/MessagesPage'
+import MessagesPage, { MessagesEmptyPane } from './pages/MessagesPage'
 import ConversationPage from './pages/ConversationPage'
-import AiPage from './pages/AiPage'
+import AiPage, { AiEmptyPane } from './pages/AiPage'
 import AiConversationPage from './pages/AiConversationPage'
 import SearchPage from './pages/SearchPage'
 import NotificationsPage from './pages/NotificationsPage'
@@ -32,11 +33,13 @@ export default function App() {
 	return (
 		<Routes>
 			{/* Public routes */}
-			<Route element={<PublicLayout />}>
-				<Route index element={<LandingPage />} />
+			<Route element={<AuthLayout />}>
 				<Route path="login" element={<LoginPage />} />
 				<Route path="register" element={<RegisterPage />} />
 				<Route path="auth/link" element={<AuthLinkPage />} />
+			</Route>
+			<Route element={<PublicLayout />}>
+				<Route index element={<LandingPage />} />
 				<Route path="privacy-policy" element={<PrivacyPolicyPage />} />
 				<Route path="terms-of-service" element={<TermsOfServicePage />} />
 				<Route path="403" element={<ForbiddenPage />} />
@@ -55,10 +58,14 @@ export default function App() {
 					<Route path="users/:id" element={<ProfilePage />} />
 					<Route path="friends" element={<FriendsPage />} />
 					<Route path="settings" element={<SettingsPage />} />
-					<Route path="messages" element={<MessagesPage />} />
-					<Route path="messages/:userId" element={<ConversationPage />} />
-					<Route path="ai" element={<AiPage />} />
-					<Route path="ai/:conversationId" element={<AiConversationPage />} />
+					<Route path="messages" element={<MessagesPage />}>
+						<Route index element={<MessagesEmptyPane />} />
+						<Route path=":userId" element={<ConversationPage />} />
+					</Route>
+					<Route path="ai" element={<AiPage />}>
+						<Route index element={<AiEmptyPane />} />
+						<Route path=":conversationId" element={<AiConversationPage />} />
+					</Route>
 					<Route path="search" element={<SearchPage />} />
 					<Route path="notifications" element={<NotificationsPage />} />
 					<Route path="admin/moderation" element={<ModerationPage />} />

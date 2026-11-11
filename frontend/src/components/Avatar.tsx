@@ -11,6 +11,8 @@ type AvatarUser = Pick<
 type Props = {
   user: AvatarUser
   size?: number
+  // When set, draws a presence dot on the avatar.
+  online?: boolean
 }
 
 const PALETTE = [
@@ -35,10 +37,26 @@ function stableColor(username: string): string {
   return PALETTE[hash % PALETTE.length]
 }
 
-export default function Avatar({
-  user,
-  size = 32,
-}: Props) {
+export default function Avatar({ user, size = 32, online }: Props) {
+  const face = <AvatarFace user={user} size={size} />
+  if (online === undefined) return face
+
+  const dot = size >= 40 ? 12 : 10
+  return (
+    <span className="relative inline-flex shrink-0">
+      {face}
+      <span
+        className={`absolute bottom-0 right-0 rounded-full border-2 border-surface ${
+          online ? 'bg-online' : 'bg-offline'
+        }`}
+        style={{ width: dot, height: dot }}
+      />
+      <span className="sr-only">{online ? 'Online' : 'Offline'}</span>
+    </span>
+  )
+}
+
+function AvatarFace({ user, size }: { user: AvatarUser; size: number }) {
   const anonymized = user.is_anonymized ?? false
 
   const initials = (
@@ -72,7 +90,7 @@ export default function Avatar({
 
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      className="inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold leading-none text-white"
       style={style}
       role="img"
       aria-label={

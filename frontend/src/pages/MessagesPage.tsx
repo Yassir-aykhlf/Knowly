@@ -1,15 +1,27 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, Outlet, useMatch } from 'react-router-dom'
 
 import Avatar from '../components/Avatar'
+import NavIcon from '../components/NavIcon'
+import { EmptyState, ErrorState, SkeletonRows } from '../components/StateBlocks'
 import { usePolling } from '../hooks/usePolling'
 import { api, ApiError } from '../lib/api'
 import { relativeTime } from '../lib/format'
-import type { Conversation } from '../lib/types'
+import type { Conversation, Friend } from '../lib/types'
+
+export type MessagesOutletContext = {
+  conversations: Conversation[] | null
+  // Presence is only known for friends; undefined means "unknown".
+  onlineById: Record<string, boolean>
+  refreshList: () => void
+}
 
 export default function MessagesPage() {
+  const activeId = useMatch('/messages/:userId')?.params.userId
   const [conversations, setConversations] = useState<Conversation[] | null>(null)
+  const [onlineById, setOnlineById] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState('')
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -21,54 +33,143 @@ export default function MessagesPage() {
     }
   }, [])
 
-  useEffect(() => {
+  const fetchPresence = useCallback(async () => {
+    try {
+      const friends = await api.get<Friend[]>('/friends')
+      setOnlineById(Object.fromEntries(friends.map((f) => [f.user.id, f.online])))
+    } catch {
+      // Presence dots are optional; the list works without them.
+    }
+  }, [])
+
+  const refreshList = useCallback(() => {
     void fetchConversations()
   }, [fetchConversations])
 
-  usePolling(() => void fetchConversations(), 30000)
+  useEffect(() => {
+    void fetchConversations()
+    void fetchPresence()
+  }, [fetchConversations, fetchPresence])
+
+  usePolling(() => {
+    void fetchConversations()
+    void fetchPresence()
+  }, 30000)
+
+  const context = useMemo<MessagesOutletContext>(
+    () => ({ conversations, onlineById, refreshList }),
+    [conversations, onlineById, refreshList],
+  )
+
+  const needle = filter.trim().toLowerCase()
+  const shown = conversations?.filter((c) => c.user.username.toLowerCase().includes(needle)) ?? null
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-4 text-xl font-semibold">Messages</h1>
+    <div className="flex min-h-0 flex-1">
+      <section
+        aria-label="Conversations"
+        className={`${activeId ? 'hidden lg:flex' : 'flex'} min-h-0 w-full flex-col border-line bg-surface lg:w-[320px] lg:shrink-0 lg:border-r`}
+      >
+        <div className="px-4 pb-3 pt-5">
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.02em] text-ink">Messages</h1>
+          <div className="relative mt-3">
+            <NavIcon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim" />
+            <input
+              type="search"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Find a person"
+              aria-label="Find a person"
+              className="h-11 w-full rounded-btn border border-transparent bg-fill-subtle pl-9 pr-3 text-base text-ink placeholder:text-ink-dim focus:border-accent focus:bg-surface focus:outline-none lg:h-10 lg:text-body"
+            />
+          </div>
+        </div>
 
-      {error && <p role="alert">{error}{' '}<button type="button" onClick={() => void fetchConversations()}>Retry</button></p>}
-      {conversations === null && !error && <p className="text-sm text-slate-500">Loading...</p>}
+        <div className="relative min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+          {error && (
+            <div className="px-2">
+              <ErrorState title="Couldn't load messages" message={error} onRetry={refreshList} />
+            </div>
+          )}
+          {conversations === null && !error && <SkeletonRows count={4} />}
 
-      {conversations !== null && conversations.length === 0 && (
-        <p className="text-sm text-slate-500">No conversations yet.</p>
-      )}
-
-      {conversations !== null && conversations.length > 0 && (
-        <ul className="divide-y rounded-lg border">
-          {conversations.map((c) => (
-            <li key={c.user.id}>
-              <Link
-                to={`/messages/${c.user.id}`}
-                className="flex items-center gap-3 p-3 hover:bg-slate-50"
+          {conversations !== null && conversations.length === 0 && (
+            <div className="px-2 pt-2">
+              <EmptyState
+                title="No conversations yet"
+                action={<Link to="/users" className="ah-btn-secondary ah-btn-sm">Find people</Link>}
               >
-                <Avatar user={c.user} size={40} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{c.user.username}</span>
-                    <span className="shrink-0 text-xs text-slate-400">
-                      {relativeTime(c.last_message_at)}
+                Open someone&apos;s profile and choose Message to start one.
+              </EmptyState>
+            </div>
+          )}
+
+          {shown !== null && conversations !== null && conversations.length > 0 && shown.length === 0 && (
+            <p className="px-3 py-4 text-body text-ink-muted">No conversation matches “{filter.trim()}”.</p>
+          )}
+
+          <ul className="space-y-0.5">
+            {shown?.map((c) => {
+              const active = c.user.id === activeId
+              const unread = c.unread_count > 0
+              return (
+                <li key={c.user.id}>
+                  <Link
+                    to={`/messages/${c.user.id}`}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 no-underline transition-colors ${
+                      active ? 'bg-accent-tint' : 'hover:bg-line4'
+                    }`}
+                  >
+                    <Avatar user={c.user} size={40} online={onlineById[c.user.id]} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className={`truncate text-body text-ink ${unread ? 'font-bold' : 'font-semibold'}`}>
+                          {c.user.username}
+                        </span>
+                        <span className="shrink-0 text-meta text-ink-ghost">{relativeTime(c.last_message_at)}</span>
+                      </span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className={`truncate text-body-sm ${unread ? 'font-medium text-ink' : 'text-ink-faint'}`}>
+                          {c.last_message_from_me ? 'You: ' : ''}
+                          {c.last_message}
+                        </span>
+                        {unread && (
+                          <span className="ah-count shrink-0">
+                            {c.unread_count}
+                            <span className="sr-only"> unread</span>
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  </div>
-                  <p className="truncate text-sm text-slate-500">
-                    {c.last_message_from_me ? 'You: ' : ''}
-                    {c.last_message}
-                  </p>
-                </div>
-                {c.unread_count > 0 && (
-                  <span className="ml-2 shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs text-white">
-                    {c.unread_count}
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </section>
+
+      <section
+        aria-label="Conversation"
+        className={`${activeId ? 'flex' : 'hidden lg:flex'} min-h-0 min-w-0 flex-1 flex-col`}
+      >
+        <Outlet context={context} />
+      </section>
+    </div>
+  )
+}
+
+export function MessagesEmptyPane() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-8">
+      <div className="max-w-sm text-center">
+        <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-tint text-accent-dark">
+          <NavIcon name="messages" size={24} />
+        </span>
+        <p className="ah-empty-title">Pick a conversation</p>
+        <p className="ah-empty-text">Choose someone from the list to read and send messages.</p>
+      </div>
     </div>
   )
 }

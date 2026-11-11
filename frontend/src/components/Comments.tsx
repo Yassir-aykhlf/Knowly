@@ -26,7 +26,7 @@ export default function Comments({ parentType, parentId, comments, viewerId, onC
   }
 
   return (
-    <div className="border-t border-line4 pt-2">
+    <div className="border-t border-line4 pt-1">
       {comments.length > 0 && (
         <ul className="divide-y divide-line4">
           {comments.map((comment) => (
@@ -57,7 +57,7 @@ export default function Comments({ parentType, parentId, comments, viewerId, onC
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="mt-1 text-body-sm text-ink-faint hover:text-ink"
+          className="ah-text-btn mt-1"
         >
           Add a comment
         </button>
@@ -97,7 +97,7 @@ function CommentItem({ comment, isMine, onChanged }: ItemProps) {
   }
 
   return (
-    <li className="space-y-1 py-2 text-body-sm">
+    <li className="space-y-1 py-2.5 text-body-sm leading-relaxed">
       {isMine && (
         <ModerationBanner
           status={comment.moderation_status}
@@ -128,15 +128,15 @@ function CommentItem({ comment, isMine, onChanged }: ItemProps) {
             compact
           />
           {isMine && (
-            <span className="ml-2 inline-flex gap-2 text-xs">
-              <button type="button" onClick={() => setEditing(true)} className="text-ink-faint hover:text-accent">
+            <span className="ml-2 inline-flex gap-3 text-meta">
+              <button type="button" onClick={() => setEditing(true)} className="font-medium text-ink-faint hover:text-accent-dark">
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => void remove()}
                 disabled={busy}
-                className="text-ink-faint hover:text-red-600"
+                className="font-medium text-ink-faint hover:text-danger"
               >
                 Delete
               </button>

@@ -1,5 +1,4 @@
-// AddFriendButton — STUB. Renders nothing for now. Task C-08 implements the
-// add / requested / accept-reject / friends button using the profile's
+// Add / requested / accept-reject / friends button driven by the profile's
 // `friendship` state.
 import { useEffect, useState } from 'react'
 
@@ -97,7 +96,7 @@ export default function AddFriendButton({ userId, friendship, isAnonymized = fal
         <button
           type="button"
           onClick={() => void sendRequest()}
-          className="rounded-md bg-accent px-4 py-2 text-sm text-white"
+          className="ah-btn-primary"
         >
           Add friend
         </button>
@@ -108,7 +107,7 @@ export default function AddFriendButton({ userId, friendship, isAnonymized = fal
         <button
           type="button"
           disabled
-          className="rounded-md border px-4 py-2 text-sm text-slate-400"
+          className="ah-btn bg-line4 text-ink-muted disabled:opacity-100"
         >
           Requested
         </button>
@@ -120,14 +119,14 @@ export default function AddFriendButton({ userId, friendship, isAnonymized = fal
           <button
             type="button"
             onClick={() => void accept()}
-            className="rounded-md bg-accent px-4 py-2 text-sm text-white"
+            className="ah-btn-primary"
           >
             Accept
           </button>
           <button
             type="button"
             onClick={() => void reject()}
-            className="rounded-md border px-4 py-2 text-sm"
+            className="ah-btn-secondary"
           >
             Reject
           </button>
@@ -137,13 +136,13 @@ export default function AddFriendButton({ userId, friendship, isAnonymized = fal
     case 'friends':
       return (
         <div className="flex items-center gap-2">
-          <span className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-700">
-            Friends ✓
+          <span className="ah-btn cursor-default bg-accent-tint text-accent-dark">
+            <span aria-hidden="true">✓</span> Friends
           </span>
           <button
             type="button"
             onClick={() => void remove()}
-            className="text-sm text-slate-500 underline"
+            className="ah-btn-ghost"
           >
             Remove
           </button>

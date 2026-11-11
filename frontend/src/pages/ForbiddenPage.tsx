@@ -1,5 +1,9 @@
-import Placeholder from '../components/Placeholder'
+import StatusPage from '../components/StatusPage'
 
 export default function ForbiddenPage() {
-  return <Placeholder name="403 — Forbidden" />
+  return (
+    <StatusPage code="403" title="You can't open this page">
+      Your account doesn't have access to this area.
+    </StatusPage>
+  )
 }

@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 
+import NavIcon from './NavIcon'
+
 type Props = {
   value: string
   onSearch: (value: string) => void
   delay?: number
+  placeholder?: string
+  label?: string
 }
 
-export default function UserSearchBar({ value, onSearch, delay = 300 }: Props) {
+// Debounced search field: typing searches after `delay`, Enter searches now.
+export default function UserSearchBar({
+  value,
+  onSearch,
+  delay = 300,
+  placeholder = 'Search people…',
+  label = 'Search people',
+}: Props) {
   const [text, setText] = useState(value)
   const onSearchRef = useRef(onSearch)
   onSearchRef.current = onSearch
@@ -28,32 +39,18 @@ export default function UserSearchBar({ value, onSearch, delay = 300 }: Props) {
         e.preventDefault()
         onSearch(text.trim())
       }}
-      className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm focus-within:border-teal-600"
+      className="relative w-full"
     >
+      <NavIcon name="search" size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-dim" />
       <input
-        type="text"
+        type="search"
         value={text}
+        maxLength={50}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Search users..."
-        aria-label="Search users"
-        className="w-full bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+        placeholder={placeholder}
+        aria-label={label}
+        className="ah-input rounded-xl pl-10"
       />
-      {text && (
-        <button
-          type="button"
-          onClick={() => {
-            setText('')
-            onSearch('')
-          }}
-          aria-label="Clear search"
-          className="text-sm text-gray-400 hover:text-gray-600"
-        >
-          ✕
-        </button>
-      )}
-      <button type="submit" className="ah-btn-primary">
-        Search
-      </button>
     </form>
   )
 }

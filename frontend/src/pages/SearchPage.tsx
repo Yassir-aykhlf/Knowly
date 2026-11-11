@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
-import Avatar from '../components/Avatar'
+import NavIcon from '../components/NavIcon'
+import Pager from '../components/Pager'
+import QuestionCard from '../components/QuestionCard'
+import { EmptyState, ErrorState, SkeletonCards } from '../components/StateBlocks'
 import { api, ApiError } from '../lib/api'
-import { relativeTime } from '../lib/format'
 import type { Paginated, SearchResult } from '../lib/types'
 
 type ResultsState =
@@ -12,49 +14,22 @@ type ResultsState =
   | { key: string; status: 'ready'; data: Paginated<SearchResult> }
 
 const FILTERS = ['q', 'tag', 'author', 'status', 'from', 'to', 'sort', 'page']
-const inputClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600'
-const buttonClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50'
+const MORE_FILTERS = ['tag', 'author', 'from', 'to']
+
+const STATUSES = [
+  { value: '', label: 'Any status' },
+  { value: 'unanswered', label: 'Unanswered' },
+  { value: 'answered', label: 'Answered' },
+  { value: 'accepted', label: 'Accepted answer' },
+]
 
 function renderHighlight(highlight: string): ReactNode[] {
   let marked = false
   return highlight.split(/(<mark>|<\/mark>)/g).map((part, index) => {
     if (part === '<mark>') { marked = true; return null }
     if (part === '</mark>') { marked = false; return null }
-    return marked ? <mark key={index} className="rounded-sm bg-amber-100 text-inherit">{part}</mark> : part
+    return marked ? <mark key={index} className="rounded-sm bg-warn-tint px-0.5 text-inherit">{part}</mark> : part
   })
-}
-
-function ResultCard({ item, highlight }: { item: SearchResult; highlight: boolean }) {
-  return (
-    <article className="flex gap-4 border-b border-slate-200 py-5">
-      <div className="w-16 shrink-0 space-y-2 text-right text-xs text-slate-500">
-        <p><span className="font-semibold text-slate-800">{item.vote_total}</span> {item.vote_total === 1 ? 'vote' : 'votes'}</p>
-        <p className={item.has_accepted_answer ? 'rounded border border-teal-600 p-1 text-teal-700' : ''}>
-          {item.has_accepted_answer && <span aria-label="Has an accepted answer">✓ </span>}
-          <span className="font-semibold">{item.answer_count}</span> {item.answer_count === 1 ? 'answer' : 'answers'}
-        </p>
-        <p>{item.view_count} {item.view_count === 1 ? 'view' : 'views'}</p>
-      </div>
-      <div className="min-w-0 flex-1 space-y-3">
-        <h2 className="break-words text-lg font-semibold leading-snug">
-          <Link to={`/questions/${item.id}`} className="text-slate-800 hover:text-accent hover:underline">{item.title}</Link>
-        </h2>
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-600">
-          {highlight ? renderHighlight(item.highlight) : item.highlight}
-        </p>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ul aria-label="Tags" className="flex flex-wrap gap-2">
-            {item.tags.map((tag) => <li key={tag} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">{tag}</li>)}
-          </ul>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Avatar user={item.author} size={22} />
-            <Link to={`/users/${item.author.id}`} className="font-medium hover:text-accent">{item.author.username}</Link>
-            <time dateTime={item.created_at}>{relativeTime(item.created_at)}</time>
-          </div>
-        </div>
-      </div>
-    </article>
-  )
 }
 
 export default function SearchPage() {
@@ -67,6 +42,9 @@ export default function SearchPage() {
   const pageValue = Number(params.get('page') ?? 1)
   const page = Number.isSafeInteger(pageValue) && pageValue > 0 ? pageValue : 1
   const active = FILTERS.some((name) => params.has(name))
+  const status = params.get('status') ?? ''
+  const moreCount = MORE_FILTERS.filter((name) => params.has(name)).length
+  const [moreOpen, setMoreOpen] = useState(moreCount > 0)
   const request = new URLSearchParams()
   for (const name of FILTERS) {
     if (name !== 'page') for (const value of params.getAll(name)) request.append(name, value)
@@ -76,7 +54,6 @@ export default function SearchPage() {
   const requestKey = request.toString()
 
   useEffect(() => {
-    if (!active) return
     let ignore = false
     setState({ key: requestKey, status: 'loading' })
     const timer = window.setTimeout(() => {
@@ -91,10 +68,10 @@ export default function SearchPage() {
       })
     }, 200)
     return () => { ignore = true; window.clearTimeout(timer) }
-  }, [active, requestKey, attempt])
+  }, [requestKey, attempt])
 
   useEffect(() => {
-    if (!active || state.status !== 'ready' || state.key !== requestKey) return
+    if (state.status !== 'ready' || state.key !== requestKey) return
     const lastPage = Math.max(1, Math.ceil(state.data.total / state.data.limit))
     if (page > lastPage) {
       setParams((current) => {
@@ -103,7 +80,7 @@ export default function SearchPage() {
         return next
       }, { replace: true })
     }
-  }, [active, state, requestKey, page, setParams])
+  }, [state, requestKey, page, setParams])
 
   function change(name: string, value: string) {
     setParams((current) => {
@@ -112,7 +89,7 @@ export default function SearchPage() {
       else next.delete(name)
       next.delete('page')
       return next
-    })
+    }, { replace: true })
   }
 
   function changeTags(nextTags: string[]) {
@@ -150,103 +127,152 @@ export default function SearchPage() {
     })
   }
 
+  const loading = state.key !== requestKey || state.status === 'loading'
+  const ready = !loading && state.status === 'ready' ? state.data : null
+  const totalPages = ready ? Math.max(1, Math.ceil(ready.total / ready.limit)) : 1
+
   function results() {
-    if (!active) return (
-      <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
-        <h2 className="font-semibold">Find a question</h2>
-        <p className="mt-2 text-sm text-slate-600">Enter words, choose filters, or select Search to browse all questions.</p>
-      </div>
-    )
-    if (state.key !== requestKey || state.status === 'loading') return <p role="status" className="py-8 text-sm text-slate-500">Searching…</p>
+    if (loading) return <SkeletonCards count={3} className="grid gap-3" />
     if (state.status === 'error') return (
-      <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <p>{state.message}</p>
-        <button type="button" onClick={() => setAttempt((value) => value + 1)} className="mt-2 font-semibold underline">Retry</button>
-      </div>
+      <ErrorState title="Couldn't load results" message={state.message} onRetry={() => setAttempt((value) => value + 1)} />
     )
-    const { items, total, limit } = state.data
-    const totalPages = Math.max(1, Math.ceil(total / limit))
+    if (!ready) return null
+    if (ready.total === 0) return (
+      <EmptyState
+        title="No questions match your search"
+        action={<Link to="/ask" state={q.trim() ? { title: q.trim() } : null} className="ah-btn-primary ah-btn-sm">Ask it as a new question</Link>}
+      >
+        Try different words or remove a filter.
+      </EmptyState>
+    )
     return (
-      <div className="space-y-4">
-        <p role="status" className="text-sm font-medium text-slate-600">{total} {total === 1 ? 'question' : 'questions'} found</p>
-        {total === 0 ? (
-          <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
-            <h2 className="font-semibold">No questions match your search</h2>
-            <p className="mt-2 text-sm text-slate-600">Try different words or remove a filter.</p>
-          </div>
-        ) : (
-          <>
-            <div>{items.map((item) => <ResultCard key={item.id} item={item} highlight={Boolean(q.trim())} />)}</div>
-            <nav aria-label="Search pagination" className="flex flex-wrap items-center justify-center gap-4 pt-4">
-              <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => goToPage(page - 1)}>Previous</button>
-              <span className="text-sm text-slate-600">Page {page} of {totalPages}</span>
-              <button type="button" className={buttonClass} disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>Next</button>
-            </nav>
-          </>
-        )}
-      </div>
+      <ul className="grid gap-3">
+        {ready.items.map((item) => (
+          <li key={item.id} className="min-w-0">
+            <QuestionCard question={item} excerpt={q.trim() ? renderHighlight(item.highlight) : item.highlight} />
+          </li>
+        ))}
+      </ul>
     )
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Search questions</h1>
-        <p className="mt-2 text-sm text-slate-600">Find answers by topic, author, status or date. Copy the URL to share your search.</p>
-      </header>
-      <form onSubmit={submit} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex-1 space-y-1 text-sm font-medium">
-            <span>Search words</span>
-            <input type="search" maxLength={200} value={q} onChange={(event) => change('q', event.target.value)} placeholder="Words or an exact phrase" className={inputClass} />
-          </label>
-          <button type="submit" className={buttonClass}>Search</button>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2">
-            <label htmlFor="search-tag" className="block text-sm font-medium">Tags</label>
-            <div className="flex gap-2">
-              <input id="search-tag" value={tagDraft} maxLength={200} placeholder="Add a tag" className={inputClass}
-                onChange={(event) => setTagDraft(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addTag() } }} />
-              <button type="button" onClick={addTag} disabled={!tagDraft.trim()} aria-label="Add tag" className="rounded-lg border border-slate-300 bg-white px-3 text-sm disabled:opacity-50">Add</button>
+    <div className="flex flex-1 flex-col">
+      <div className="ah-page max-w-[1200px]">
+        <header>
+          <h1 className="ah-h1">Browse questions</h1>
+          <p className="ah-lead mt-2.5">Search by words, tags, author, status or date. Copy the URL to share a search.</p>
+        </header>
+
+        <form onSubmit={submit} className="mt-5 lg:mt-6">
+          <div className="flex items-center gap-1.5 rounded-card border border-line3 bg-surface p-1.5 transition-colors focus-within:border-accent">
+            <NavIcon name="search" size={18} className="ml-2.5 text-ink-dim" />
+            <label htmlFor="search-q" className="sr-only">Search words</label>
+            <input id="search-q" type="search" maxLength={200} value={q} onChange={(event) => change('q', event.target.value)}
+              placeholder="Words or an exact phrase"
+              className="h-10 min-w-0 flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-ink-dim focus:outline-none lg:text-[15px]" />
+            <button type="submit" className="ah-btn-primary">Search</button>
+          </div>
+
+          <div className="mt-5 grid gap-5 lg:mt-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
+            <div className="min-w-0 space-y-4 lg:space-y-5">
+              {/* Mobile: status pills + a toggle for the remaining filters */}
+              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden" role="group" aria-label="Status">
+                {STATUSES.map((option) => (
+                  <button key={option.value} type="button" aria-pressed={status === option.value}
+                    onClick={() => change('status', option.value)}
+                    className={`ah-pill ${status === option.value ? 'ah-pill-active' : ''}`}>
+                    {option.label}
+                  </button>
+                ))}
+                <button type="button" aria-expanded={moreOpen} aria-controls="more-filters"
+                  onClick={() => setMoreOpen((value) => !value)}
+                  className={`ah-pill ${moreOpen ? 'border-accent text-accent-dark' : ''}`}>
+                  <NavIcon name="filter" size={14} />
+                  More filters{moreCount > 0 ? ` · ${moreCount}` : ''}
+                </button>
+              </div>
+
+              {/* Desktop: status as radio rows */}
+              <fieldset className="hidden lg:block">
+                <legend className="ah-overline mb-2">Status</legend>
+                <div className="space-y-0.5">
+                  {STATUSES.map((option) => {
+                    const checked = status === option.value
+                    return (
+                      <label key={option.value}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-body transition-colors ${
+                          checked ? 'bg-accent-tint font-semibold text-accent-dark' : 'text-ink-soft hover:bg-line4'
+                        }`}>
+                        <input type="radio" name="status" value={option.value} checked={checked}
+                          onChange={() => change('status', option.value)} className="peer sr-only" />
+                        <span aria-hidden="true"
+                          className={`h-4 w-4 shrink-0 rounded-full bg-surface peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent ${
+                            checked ? 'border-4 border-accent' : 'border border-line3'
+                          }`} />
+                        {option.label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              <div id="more-filters" className={`${moreOpen ? 'grid' : 'hidden'} gap-4 rounded-card border border-line bg-surface p-4 sm:grid-cols-2 lg:grid lg:grid-cols-1 lg:gap-5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0`}>
+                <div>
+                  <label htmlFor="search-tag" className="ah-overline mb-2 block">Tags</label>
+                  <div className="flex gap-2">
+                    <input id="search-tag" value={tagDraft} maxLength={200} placeholder="Add a tag" className="ah-input"
+                      onChange={(event) => setTagDraft(event.target.value)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addTag() } }} />
+                    <button type="button" onClick={addTag} disabled={!tagDraft.trim()} aria-label="Add tag" className="ah-btn-secondary px-3">Add</button>
+                  </div>
+                  {tags.length > 0 && <ul aria-label="Selected tags" className="mt-2 flex flex-wrap gap-1.5">
+                    {tags.map((tag, index) => <li key={`${tag}:${index}`}>
+                      <button type="button" onClick={() => changeTags(tags.filter((_, i) => i !== index))} aria-label={`Remove tag ${tag}`}
+                        className="ah-tag gap-1.5 py-1.5 hover:bg-line3">{tag} <span aria-hidden="true">×</span></button>
+                    </li>)}
+                  </ul>}
+                  <p className="ah-help">Questions must have every selected tag.</p>
+                </div>
+                <div>
+                  <label htmlFor="search-author" className="ah-overline mb-2 block">Author</label>
+                  <input id="search-author" value={params.get('author') ?? ''} maxLength={30} onChange={(event) => change('author', event.target.value)} placeholder="Username" className="ah-input" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:col-span-2 lg:col-span-1 lg:grid-cols-1 lg:gap-5">
+                  <div className="min-w-0">
+                    <label htmlFor="search-from" className="ah-overline mb-2 block">From</label>
+                    <input id="search-from" type="date" value={params.get('from') ?? ''} onChange={(event) => change('from', event.target.value)} className="ah-input min-w-0" />
+                  </div>
+                  <div className="min-w-0">
+                    <label htmlFor="search-to" className="ah-overline mb-2 block">To</label>
+                    <input id="search-to" type="date" value={params.get('to') ?? ''} onChange={(event) => change('to', event.target.value)} className="ah-input min-w-0" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-500">Questions must contain every selected tag.</p>
-            {tags.length > 0 && <ul aria-label="Selected tags" className="flex flex-wrap gap-2">
-              {tags.map((tag, index) => <li key={`${tag}:${index}`}>
-                <button type="button" onClick={() => changeTags(tags.filter((_, i) => i !== index))} aria-label={`Remove tag ${tag}`}
-                  className="rounded bg-teal-100 px-2 py-1 text-xs text-teal-900">{tag} ×</button>
-              </li>)}
-            </ul>}
+
+            <section aria-label="Search results" className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p role="status" className="text-body font-medium text-ink-soft">
+                  {ready
+                    ? <>{ready.total.toLocaleString()} {ready.total === 1 ? 'result' : 'results'}{q.trim() && <> for <span className="font-semibold text-ink">“{q.trim()}”</span></>}</>
+                    : loading ? 'Searching…' : ''}
+                </p>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="search-sort" className="text-body-sm text-ink-faint">Sort</label>
+                  <select id="search-sort" value={params.get('sort') ?? ''} onChange={(event) => change('sort', event.target.value)}
+                    className="h-9 rounded-[9px] border border-line3 bg-surface px-2 text-body-sm font-medium text-ink focus:border-accent focus:outline-none">
+                    <option value="">Automatic</option><option value="relevance">Relevance</option><option value="newest">Newest</option><option value="votes">Votes</option><option value="answers">Answers</option>
+                  </select>
+                  {(active || tagDraft) && <button type="button" onClick={() => { setTagDraft(''); setParams({}) }} className="ah-link text-body-sm">Clear search</button>}
+                </div>
+              </div>
+              {results()}
+            </section>
           </div>
-          <label className="space-y-1 text-sm font-medium">
-            <span>Author</span>
-            <input value={params.get('author') ?? ''} maxLength={30} onChange={(event) => change('author', event.target.value)} placeholder="Username" className={inputClass} />
-          </label>
-          <div className="space-y-1">
-            <label htmlFor="search-status" className="text-sm font-medium">Status</label>
-            <select id="search-status" value={params.get('status') ?? ''} onChange={(event) => change('status', event.target.value)} className={inputClass}>
-              <option value="">Any status</option><option value="unanswered">Unanswered</option><option value="answered">Answered</option><option value="accepted">Accepted answer</option>
-            </select>
-          </div>
-          <label className="space-y-1 text-sm font-medium">
-            <span>From date</span>
-            <input type="date" value={params.get('from') ?? ''} onChange={(event) => change('from', event.target.value)} className={inputClass} />
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            <span>To date</span>
-            <input type="date" value={params.get('to') ?? ''} onChange={(event) => change('to', event.target.value)} className={inputClass} />
-          </label>
-          <div className="space-y-1">
-            <label htmlFor="search-sort" className="text-sm font-medium">Sort by</label>
-            <select id="search-sort" value={params.get('sort') ?? ''} onChange={(event) => change('sort', event.target.value)} className={inputClass}>
-              <option value="">Automatic</option><option value="relevance">Relevance</option><option value="newest">Newest</option><option value="votes">Votes</option><option value="answers">Answers</option>
-            </select>
-          </div>
-        </div>
-        {(active || tagDraft) && <button type="button" onClick={() => { setTagDraft(''); setParams({}) }} className="text-sm text-slate-600 underline hover:text-accent">Clear search</button>}
-      </form>
-      <section aria-label="Search results" aria-live="polite">{results()}</section>
+        </form>
+      </div>
+      <Pager page={page} totalPages={totalPages} onChange={goToPage} label="Search pagination" />
     </div>
   )
 }

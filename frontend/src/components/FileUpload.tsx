@@ -3,6 +3,7 @@ import type { Attachment } from '../lib/types'
 import type { BeginFileOperation } from '../hooks/useAttachments'
 import { api, ApiError } from '../lib/api'
 import AttachmentList from './AttachmentList'
+import NavIcon from './NavIcon'
 
 type Props = {
   onUploaded?: (attachment: Attachment) => void
@@ -88,9 +89,9 @@ export default function FileUpload({
   return (
     <div className="space-y-3 text-body-sm">
       <label
-        className={`block rounded-btn border-2 border-dashed p-4 transition-colors ${
-          dragging ? 'border-accent bg-accent-subtle' : 'border-line3 bg-surface-raised'
-        } ${disabled || atLimit ? 'opacity-60' : 'cursor-pointer'}`}
+        className={`flex flex-col items-center gap-1 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors focus-within:border-accent ${
+          dragging ? 'border-accent bg-accent-wash' : 'border-line3 bg-surface-raised'
+        } ${disabled || atLimit ? 'opacity-60' : 'cursor-pointer hover:border-accent-line hover:bg-accent-wash'}`}
         onDragOver={(event) => {
           event.preventDefault()
           if (!disabled && !atLimit) setDragging(true)
@@ -102,16 +103,19 @@ export default function FileUpload({
           select(Array.from(event.dataTransfer.files))
         }}
       >
-        <span className="font-medium text-accent">Choose files</span>
-        <span className="text-ink-muted"> or drag them here</span>
-        <span className="mt-1 block text-meta text-ink-faint">
+        <NavIcon name="upload" className="mb-1 text-ink-faint" />
+        <span>
+          <span className="font-semibold text-accent-dark">Choose files</span>
+          <span className="text-ink-muted"> or drag them here</span>
+        </span>
+        <span className="block text-meta text-ink-faint">
           {count()} / {MAX_ATTACHMENTS} attachments · Files upload immediately
         </span>
         <input
           type="file"
           multiple
           aria-label="Attach files"
-          className="mt-3 block w-full text-body-sm file:mr-3 file:rounded-btn file:border-0 file:bg-accent-tint file:px-3 file:py-2 file:text-accent"
+          className="sr-only"
           disabled={disabled || atLimit}
           onChange={(event) => {
             const files = Array.from(event.target.files ?? [])
@@ -120,10 +124,10 @@ export default function FileUpload({
           }}
         />
       </label>
-      {limitError && <p role="alert" className="text-red-700">{limitError}</p>}
-      <ul className="space-y-2" aria-label="File upload progress">
+      {limitError && <p role="alert" className="text-danger">{limitError}</p>}
+      <ul className="space-y-2 empty:hidden" aria-label="File upload progress">
         {uploads.filter((upload) => upload.status !== 'done').map((upload) => (
-          <li key={upload.id} className="rounded-btn border border-line px-3 py-2">
+          <li key={upload.id} className="rounded-xl border border-line bg-surface px-3 py-2">
             <div className="flex items-start justify-between gap-3">
               <span className="min-w-0 break-all text-ink">{upload.name}</span>
               {upload.status === 'error' && (
@@ -139,7 +143,7 @@ export default function FileUpload({
                 <progress aria-label={`Uploading ${upload.name}`} className="block h-2 w-full accent-accent" />
                 <span className="text-meta text-ink-muted">Uploading…</span>
               </div>
-            ) : <p role="alert" className="mt-1 text-red-700">{upload.error}</p>}
+            ) : <p role="alert" className="mt-1 text-danger">{upload.error}</p>}
           </li>
         ))}
       </ul>

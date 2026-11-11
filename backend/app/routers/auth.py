@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.auth import GoogleLinkIn, LoginIn, RegisterIn
 from app.schemas.user import UserMeOut
-from app.services.auth import login_user, logout_user, register_user
+from app.models.user import User
+from app.services.auth import get_optional_user, login_user, logout_user, register_user
 from app.services.session import SESSION_COOKIE_NAME, set_session_cookie
 
 import httpx
@@ -33,6 +34,17 @@ router = APIRouter(
     prefix="/auth",
     tags=["auth"],
 )
+
+
+@router.get(
+    "/session",
+    response_model=UserMeOut | None,
+    status_code=status.HTTP_200_OK,
+)
+async def current_session(
+    user: User | None = Depends(get_optional_user),
+) -> UserMeOut | None:
+    return UserMeOut.from_user(user) if user is not None else None
 
 
 @router.post(

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useOutletContext, useParams } from 'react-router-dom'
 
 import Avatar from '../components/Avatar'
+import NavIcon from '../components/NavIcon'
+import type { MessagesOutletContext } from './MessagesPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { usePolling } from '../hooks/usePolling'
 import { api, ApiError } from '../lib/api'
-import { relativeTime } from '../lib/format'
-import type { Message, Paginated, Author } from '../lib/types'
+import type { Message, Paginated, Author, UserProfile } from '../lib/types'
 
 const PAGE_SIZE = 30
 const SCROLL_BOTTOM_THRESHOLD = 48
@@ -16,6 +17,7 @@ export default function ConversationPage() {
   const { userId } = useParams<{ userId: string }>()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const { conversations, onlineById, refreshList } = useOutletContext<MessagesOutletContext>()
 
   const [messagesById, setMessagesById] = useState<Record<string, Message>>({})
   const [otherUser, setOtherUser] = useState<Author | null>(null)
@@ -28,6 +30,7 @@ export default function ConversationPage() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const firstLoadRef = useRef(true)
 
@@ -66,6 +69,7 @@ export default function ConversationPage() {
       if (hasUnreadFromThem || firstLoadRef.current) {
         try {
           await api.put(`/messages/${userId}/read`)
+          refreshList()
         } catch {
           // Non-fatal — the badge will just stay stale until next success.
         }
@@ -79,17 +83,31 @@ export default function ConversationPage() {
     } finally {
       firstLoadRef.current = false
     }
-  }, [userId, mergeMessages, showToast])
+  }, [userId, mergeMessages, showToast, refreshList])
+
+  const listed = conversations?.find((c) => c.user.id === userId)?.user ?? null
+  const listLoaded = conversations !== null
 
   useEffect(() => {
-    if (!userId) return
+    if (listed) {
+      setOtherUser(listed)
+      return
+    }
+    setOtherUser((current) => (current?.id === userId ? current : null))
+    // Not in the list yet (a brand-new conversation): look the person up.
+    if (!userId || !listLoaded) return
     let active = true
     api
-      .get<{ user: Author }[]>('/messages/conversations')
-      .then((convos) => {
-        if (!active) return
-        const match = convos.find((c) => c.user.id === userId)
-        if (match) setOtherUser(match.user)
+      .get<UserProfile>(`/users/${userId}`)
+      .then((profile) => {
+        if (active) {
+          setOtherUser({
+            id: profile.id,
+            username: profile.username,
+            avatar_url: profile.avatar_url,
+            is_anonymized: profile.is_anonymized,
+          })
+        }
       })
       .catch(() => {
         // Fine — we can render without a name if this fails.
@@ -97,7 +115,7 @@ export default function ConversationPage() {
     return () => {
       active = false
     }
-  }, [userId])
+  }, [userId, listed, listLoaded])
 
   useEffect(() => {
     setMessagesById({})
@@ -123,6 +141,20 @@ export default function ConversationPage() {
       bottomRef.current?.scrollIntoView({ block: 'end' })
     }
   }, [messages.length])
+
+  // Stay pinned to the newest message when the content's height changes for
+  // reasons other than a new message (web fonts loading, the window resizing).
+  useEffect(() => {
+    const scroller = scrollRef.current
+    const content = contentRef.current
+    if (!scroller || !content || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (isAtBottomRef.current) scroller.scrollTop = scroller.scrollHeight
+    })
+    observer.observe(content)
+    observer.observe(scroller)
+    return () => observer.disconnect()
+  }, [])
 
   async function loadOlder() {
     if (!userId || loadingOlder) return
@@ -186,6 +218,7 @@ export default function ConversationPage() {
         next[real.id] = real
         return next
       })
+      refreshList()
     } catch (err) {
       setMessagesById((prev) => {
         const next = { ...prev }
@@ -209,86 +242,133 @@ export default function ConversationPage() {
 
   const canLoadOlder = total !== null && messages.length < total
 
+  const online = userId ? onlineById[userId] : undefined
+  let lastDay = ''
+
   return (
-    <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-2xl flex-col px-4 py-4">
-      <div className="mb-3 flex items-center gap-3 border-b pb-3">
-        {otherUser && <Avatar user={otherUser} size={36} />}
-        <h1 className="text-lg font-semibold">{otherUser?.username ?? 'Conversation'}</h1>
-      </div>
-
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
-        {!loaded && <p className="text-sm text-slate-500">Loading...</p>}
-
-        {loaded && messages.length === 0 && (
-          <p className="text-sm text-slate-500">
-            No messages yet. Say hello — you can message anyone on Knowly.
-          </p>
+    <>
+      <header className="flex items-center gap-2 border-b border-line bg-surface px-2 py-2.5 lg:gap-3 lg:px-6 lg:py-3">
+        <Link to="/messages" className="ah-icon-btn lg:hidden" aria-label="All conversations">
+          <NavIcon name="back" strokeWidth={2} />
+        </Link>
+        {otherUser && <Avatar user={otherUser} size={36} online={online} />}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-[18px] font-bold tracking-[-0.02em] text-ink">
+            {otherUser?.username ?? 'Conversation'}
+          </h1>
+          {online !== undefined && (
+            <p className={`text-meta ${online ? 'font-medium text-accent-dark' : 'text-ink-faint'}`} aria-hidden="true">
+              {online ? 'Online' : 'Offline'}
+            </p>
+          )}
+        </div>
+        {otherUser && !otherUser.is_anonymized && (
+          <Link to={`/users/${otherUser.id}`} className="ah-btn-secondary ah-btn-sm">
+            Profile
+          </Link>
         )}
+      </header>
 
-        {loaded && messages.length > 0 && (
-          <>
-            {canLoadOlder && (
-              <div className="mb-3 text-center">
-                <button
-                  type="button"
-                  onClick={() => void loadOlder()}
-                  disabled={loadingOlder}
-                  className="text-sm text-accent underline disabled:text-slate-400"
-                >
-                  {loadingOlder ? 'Loading...' : 'Load older'}
-                </button>
-              </div>
-            )}
+      <div ref={scrollRef} onScroll={handleScroll} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-6">
+        <div ref={contentRef} className="mx-auto max-w-[760px]">
+          {!loaded && (
+            <div role="status" aria-label="Loading messages" className="space-y-3">
+              <div className="ah-skeleton h-10 w-1/2 rounded-2xl" />
+              <div className="ah-skeleton ml-auto h-10 w-2/5 rounded-2xl" />
+              <div className="ah-skeleton h-14 w-3/5 rounded-2xl" />
+            </div>
+          )}
 
-            <ul className="flex flex-col gap-2">
-              {messages.map((m) => {
-                const isMine = m.sender_id === user?.id
-                const isPending = m.id.startsWith('temp-')
-                return (
-                  <li key={m.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                        isMine ? 'bg-accent text-white' : 'bg-slate-100 text-slate-900'
-                      } ${isPending ? 'opacity-60' : ''}`}
-                    >
-                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                      <span
-                        className={`mt-1 block text-right text-[10px] ${
-                          isMine ? 'text-white/70' : 'text-slate-400'
+          {loaded && messages.length === 0 && (
+            <div className="py-10 text-center">
+              <p className="ah-empty-title">No messages yet</p>
+              <p className="ah-empty-text">Say hello. You can message anyone on Knowly.</p>
+            </div>
+          )}
+
+          {loaded && messages.length > 0 && (
+            <>
+              {canLoadOlder && (
+                <div className="mb-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => void loadOlder()}
+                    disabled={loadingOlder}
+                    className="ah-btn-secondary ah-btn-sm"
+                  >
+                    {loadingOlder ? 'Loading…' : 'Load older messages'}
+                  </button>
+                </div>
+              )}
+
+              <ul className="flex flex-col gap-2">
+                {messages.map((m) => {
+                  const isMine = m.sender_id === user?.id
+                  const isPending = m.id.startsWith('temp-')
+                  const sentAt = parseDate(m.created_at)
+                  const day = dayLabel(sentAt)
+                  const showDay = day !== lastDay
+                  lastDay = day
+                  return (
+                    <li key={m.id} className="flex flex-col">
+                      {showDay && (
+                        <p className="ah-overline my-3 text-center">{day}</p>
+                      )}
+                      <div
+                        className={`max-w-[78%] text-body-md ${isMine ? 'ah-bubble-mine self-end' : 'ah-bubble-theirs self-start'} ${
+                          isPending ? 'opacity-60' : ''
                         }`}
                       >
-                        {isPending ? 'Sending...' : relativeTime(m.created_at)}
-                      </span>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </>
-        )}
+                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                        <time dateTime={m.created_at} className="mt-1 block text-right text-[10.5px] leading-none opacity-70">
+                          {isPending ? 'Sending…' : sentAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </time>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
 
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      <div className="mt-3 flex gap-2 border-t pt-3">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          maxLength={4000}
-          placeholder="Write a message..."
-          className="flex-1 resize-none rounded-md border px-3 py-2 text-sm"
-        />
-        <button
-          type="button"
-          onClick={() => void handleSend()}
-          disabled={sending || text.trim().length === 0}
-          className="rounded-md bg-accent px-4 py-2 text-sm text-white disabled:opacity-50"
-        >
-          Send
-        </button>
+      <div className="border-t border-line bg-canvas-main px-3 pb-3 pt-3 lg:px-6 lg:pb-4">
+        <div className="ah-composer mx-auto max-w-[760px]">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            maxLength={4000}
+            placeholder="Write a message…"
+            aria-label={`Message ${otherUser?.username ?? ''}`.trim()}
+          />
+          <button
+            type="button"
+            onClick={() => void handleSend()}
+            disabled={sending || text.trim().length === 0}
+            className="ah-btn-primary"
+          >
+            Send
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
+}
+
+function parseDate(iso: string): Date {
+  return new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso) ? iso : `${iso}Z`)
+}
+
+function dayLabel(date: Date): string {
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (date.toDateString() === today.toDateString()) return 'Today'
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }

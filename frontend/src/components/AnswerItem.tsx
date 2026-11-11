@@ -80,105 +80,97 @@ export default function AnswerItem({
 
   return (
     <article
-      className={`flex gap-[18px] rounded-card border p-5 ${
-        isAccepted ? 'border-accent bg-[rgba(13,148,136,0.04)]' : 'border-line'
+      id={`answer-${answer.id}`}
+      className={`scroll-mt-4 space-y-3.5 rounded-2xl border p-4 lg:px-[22px] lg:py-5 ${
+        isAccepted ? 'border-accent bg-accent-wash' : 'border-line bg-surface'
       }`}
     >
-      <VoteArrows
-        targetType="answer"
-        targetId={answer.id}
-        total={answer.vote_total}
-        myVote={answer.my_vote}
-        disabled={isMine}
-        disabledReason={SELF_VOTE_REASON}
-      />
+      {isMine && (
+        <ModerationBanner
+          status={answer.moderation_status}
+          note={answer.moderation_note}
+          kind="answer"
+        />
+      )}
 
-      <div className="min-w-0 flex-1 space-y-3">
-        {isMine && (
-          <ModerationBanner
-            status={answer.moderation_status}
-            note={answer.moderation_note}
-            kind="answer"
-          />
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <PostMeta
+          author={answer.author}
+          createdAt={answer.created_at}
+          updatedAt={answer.updated_at}
+          avatarSize={26}
+        />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {answer.is_ai_assisted && <span className="ah-badge-ai">AI-assisted</span>}
           {canAccept ? (
             <button
               type="button"
               onClick={() => void toggleAccept()}
               disabled={busy}
               aria-pressed={isAccepted}
-              className={`disabled:opacity-50 ${
-                isAccepted
-                  ? 'ah-badge-accepted'
-                  : 'inline-flex cursor-pointer items-center rounded-badge border border-line3 px-3 py-[3px] font-mono text-tag font-bold uppercase tracking-[0.02em] text-ink-faint hover:border-accent hover:text-accent'
-              }`}
+              title={isAccepted ? 'Click to unaccept this answer' : 'Mark this as the accepted answer'}
+              className={`disabled:opacity-50 ${isAccepted ? 'ah-badge-accepted cursor-pointer' : 'ah-badge-outline'}`}
             >
               {isAccepted ? '✓ Accepted' : 'Accept'}
             </button>
           ) : (
-            isAccepted && (
-              <span className="ah-badge-accepted">✓ Accepted</span>
-            )
-          )}
-          {answer.is_ai_assisted && (
-            <span className="ah-badge-ai">AI-assisted</span>
+            isAccepted && <span className="ah-badge-accepted">✓ Accepted</span>
           )}
         </div>
+      </header>
 
-        {editing ? (
-          <EditBox
-            initial={answer.body}
-            validate={validateBody}
-            max={BODY_MAX}
-            rows={8}
-            submitLabel="Save"
-            onSubmit={save}
-            onCancel={() => setEditing(false)}
-            disabled={files.blocked || busy}
-            autoFocus
-          />
-        ) : (
-          <MarkdownBody markdown={answer.body} />
-        )}
-
-        <AttachmentList
-          items={files.items}
-          onDelete={isMine ? files.remove : undefined}
-          beginOperation={files.beginOperation}
-          disabled={files.submitting || busy}
+      {editing ? (
+        <EditBox
+          initial={answer.body}
+          validate={validateBody}
+          max={BODY_MAX}
+          rows={8}
+          label="Edit your answer"
+          submitLabel="Save"
+          onSubmit={save}
+          onCancel={() => setEditing(false)}
+          disabled={files.blocked || busy}
+          autoFocus
         />
+      ) : (
+        <MarkdownBody markdown={answer.body} />
+      )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-3 text-body-sm">
-            {isMine && !editing && (
-              <>
-                <button type="button" onClick={() => setEditing(true)} className="text-ink-faint hover:text-accent">
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void remove()}
-                  disabled={busy}
-                  className="text-ink-faint hover:text-red-600"
-                >
-                  Delete
-                </button>
-              </>
-            )}
+      <AttachmentList
+        items={files.items}
+        onDelete={isMine ? files.remove : undefined}
+        beginOperation={files.beginOperation}
+        disabled={files.submitting || busy}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <VoteArrows
+          targetType="answer"
+          targetId={answer.id}
+          total={answer.vote_total}
+          myVote={answer.my_vote}
+          disabled={isMine}
+          disabledReason={SELF_VOTE_REASON}
+        />
+        {isMine && !editing && (
+          <div className="flex gap-4">
+            <button type="button" onClick={() => setEditing(true)} className="ah-text-btn">
+              Edit
+            </button>
+            <button type="button" onClick={() => void remove()} disabled={busy} className="ah-text-btn-danger">
+              Delete
+            </button>
           </div>
-          <PostMeta author={answer.author} createdAt={answer.created_at} updatedAt={answer.updated_at} />
-        </div>
-
-        <Comments
-          parentType="answer"
-          parentId={answer.id}
-          comments={answer.comments}
-          viewerId={viewerId}
-          onChanged={onChanged}
-        />
+        )}
       </div>
+
+      <Comments
+        parentType="answer"
+        parentId={answer.id}
+        comments={answer.comments}
+        viewerId={viewerId}
+        onChanged={onChanged}
+      />
     </article>
   )
 }

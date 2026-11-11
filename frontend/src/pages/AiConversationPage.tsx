@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 
+import NavIcon from '../components/NavIcon'
+import type { AiOutletContext } from './AiPage'
 import MarkdownBody from '../components/MarkdownBody'
 import { api, ApiError } from '../lib/api'
 import { readAiStream } from '../lib/aiStream'
@@ -13,6 +15,7 @@ export default function AiConversationPage() {
 
 function Chat({ id }: { id: string }) {
   const navigate = useNavigate()
+  const { refreshList } = useOutletContext<AiOutletContext>()
   const [conversation, setConversation] = useState<AiConversationDetail | null>(null)
   const [text, setText] = useState('')
   const [error, setError] = useState('')
@@ -99,7 +102,7 @@ function Chat({ id }: { id: string }) {
             if (!active.current) break
             saved = await api.get<AiConversationDetail>(`/ai/conversations/${id}`)
           }
-          if (active.current && saved) { setConversation(saved); setPending(null); setReply('') }
+          if (active.current && saved) { setConversation(saved); setPending(null); setReply(''); refreshList() }
         } catch {
           if (active.current) setError((previous) => `${previous ? `${previous} ` : ''}Could not reload saved messages. Retry loading before sending again.`)
         }
@@ -116,54 +119,125 @@ function Chat({ id }: { id: string }) {
     })
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+    }
+  }
+
+  const canSend = Boolean(conversation) && !sending && cooldown === 0 && text.trim().length > 0 && pending === null
+
   return (
-    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-3xl flex-col gap-4 px-4 py-4">
-      <header className="space-y-2 border-b pb-3">
-        <Link to="/ai" className="text-sm text-accent hover:underline">← All conversations</Link>
-        <h1 className="truncate text-xl font-semibold">{conversation?.title || 'AI conversation'}</h1>
-        {conversation?.question && <Link to={`/questions/${conversation.question.id}`}
-          className="block truncate text-sm text-accent hover:underline">{conversation.question.title}</Link>}
+    <>
+      <header className="flex items-center gap-2 border-b border-line bg-surface px-2 py-2.5 lg:px-6 lg:py-3.5">
+        <Link to="/ai" className="ah-icon-btn lg:hidden" aria-label="All conversations">
+          <NavIcon name="back" strokeWidth={2} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-[18px] font-bold tracking-[-0.02em] text-ink lg:text-[20px]">
+            {conversation?.title || 'AI conversation'}
+          </h1>
+          {conversation?.question && (
+            <Link to={`/questions/${conversation.question.id}`} className="ah-link block truncate text-body-sm">
+              On: {conversation.question.title}
+            </Link>
+          )}
+        </div>
       </header>
-      {error && <p role="alert" className="text-sm text-red-700">{error}{' '}
-        {!sending && <button type="button" onClick={() => { setPending(null); setReply(''); setRevision((value) => value + 1) }}
-          className="underline">Retry loading</button>}
-      </p>}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {!conversation && !error && <p className="text-sm text-slate-500">Loading…</p>}
-        {conversation?.messages.length === 0 && pending === null && <p className="text-slate-500">Ask a question to start the conversation.</p>}
-        <ul className="space-y-4">
-          {conversation?.messages.map((message) => (
-            <li key={message.id} className={`rounded-lg p-4 ${message.role === 'user' ? 'ml-6 bg-accent text-white' : 'mr-6 bg-slate-100'}`}>
-              <p className="mb-2 text-xs font-semibold">{message.role === 'user' ? 'You' : 'Assistant'}</p>
-              {message.role === 'assistant' ? <MarkdownBody markdown={message.content} />
-                : <p className="whitespace-pre-wrap break-words">{message.content}</p>}
-              {message.role === 'assistant' && message.content && conversation.question && !sending &&
-                <button type="button" onClick={() => useAsAnswer(message.content)} className="mt-3 text-sm text-accent hover:underline">Use this as my answer</button>}
-            </li>
-          ))}
-          {pending !== null && <>
-            <li className="ml-6 rounded-lg bg-accent p-4 text-white"><p className="mb-2 text-xs font-semibold">You</p>
-              <p className="whitespace-pre-wrap break-words">{pending}</p></li>
-            <li className="mr-6 rounded-lg bg-slate-100 p-4"><p className="mb-2 text-xs font-semibold">Assistant</p>
-              {reply ? <MarkdownBody markdown={reply} /> : <p className="text-sm text-slate-500">{sending ? 'Thinking…' : 'Waiting for saved messages…'}</p>}
-            </li>
-          </>}
-        </ul>
-        <div ref={bottom} />
+
+      <div className="relative min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6">
+        <div className="mx-auto flex max-w-[720px] flex-col gap-4">
+          {error && (
+            <p role="alert" className="ah-alert">
+              {error}{' '}
+              {!sending && (
+                <button type="button" onClick={() => { setPending(null); setReply(''); setRevision((value) => value + 1) }}
+                  className="font-semibold underline">Retry loading</button>
+              )}
+            </p>
+          )}
+          {!conversation && !error && (
+            <div role="status" aria-label="Loading conversation" className="space-y-4">
+              <div className="ah-skeleton ml-auto h-10 w-2/3 rounded-2xl" />
+              <div className="ah-skeleton h-24 w-5/6 rounded-2xl bg-ai-skeleton" />
+            </div>
+          )}
+          {conversation?.messages.length === 0 && pending === null && (
+            <div className="py-10 text-center">
+              <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-ai-tint text-ai">
+                <NavIcon name="ai" size={24} />
+              </span>
+              <p className="ah-empty-title">How can I help?</p>
+              <p className="ah-empty-text">
+                {conversation.question
+                  ? 'Ask for help drafting an answer to the linked question.'
+                  : 'Ask a question to start the conversation.'}
+              </p>
+            </div>
+          )}
+          <ul className="flex flex-col gap-4">
+            {conversation?.messages.map((message) => (
+              message.role === 'user' ? (
+                <li key={message.id} className="flex justify-end">
+                  <div className="ah-bubble-mine max-w-[85%] text-body-md">
+                    <span className="sr-only">You: </span>
+                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  </div>
+                </li>
+              ) : (
+                <li key={message.id} className="min-w-0 rounded-card border border-ai-line bg-surface px-4 py-3.5">
+                  <p className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.02em] text-ai">Assistant</p>
+                  <MarkdownBody markdown={message.content} compact />
+                  {message.content && conversation.question && !sending && (
+                    <button type="button" onClick={() => useAsAnswer(message.content)}
+                      className="mt-3 inline-flex min-h-[32px] items-center text-body-sm font-semibold text-ai hover:underline">
+                      Use this as my answer →
+                    </button>
+                  )}
+                </li>
+              )
+            ))}
+            {pending !== null && <>
+              <li className="flex justify-end">
+                <div className="ah-bubble-mine max-w-[85%] text-body-md">
+                  <span className="sr-only">You: </span>
+                  <p className="whitespace-pre-wrap break-words">{pending}</p>
+                </div>
+              </li>
+              <li className="min-w-0 rounded-card border border-ai-line bg-surface px-4 py-3.5" aria-live="polite">
+                <p className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.02em] text-ai">Assistant</p>
+                {reply ? <MarkdownBody markdown={reply} compact /> : (
+                  <div>
+                    <p className="text-body-sm text-ink-muted">{sending ? 'Thinking…' : 'Waiting for saved messages…'}</p>
+                    <div className="ah-skeleton mt-2.5 h-3 w-3/5 bg-ai-skeleton" />
+                  </div>
+                )}
+              </li>
+            </>}
+          </ul>
+          <div ref={bottom} />
+        </div>
       </div>
-      <form onSubmit={(event) => void send(event)} className="space-y-2 border-t pt-3">
-        {cooldown > 0 && <p role="status" className="text-sm text-amber-700">Hourly limit reached. You can send again in {cooldown}s.</p>}
-        <label htmlFor="ai-message" className="sr-only">Your message</label>
-        <textarea id="ai-message" value={text} onChange={(event) => setText(event.target.value)}
-          disabled={sending || !conversation} maxLength={8000} rows={3} placeholder="Ask the assistant…"
-          className="w-full resize-none rounded-md border px-3 py-2 text-sm disabled:opacity-50" />
-        <div className="flex justify-end gap-3">
-          {sending && <button type="button" onClick={() => controller.current?.abort()}
-            className="rounded-md border px-4 py-2 text-sm">Stop generating</button>}
-          <button type="submit" disabled={!conversation || sending || cooldown > 0 || !text.trim() || pending !== null}
-            className="rounded-md bg-accent px-4 py-2 text-sm text-white disabled:opacity-50">Send</button>
+
+      <form onSubmit={(event) => void send(event)} className="border-t border-line bg-canvas-main px-3 pb-3 pt-3 lg:px-6 lg:pb-4">
+        <div className="mx-auto max-w-[720px]">
+          {cooldown > 0 && <p role="status" className="ah-alert-warn mb-2">Hourly limit reached. You can send again in {cooldown}s.</p>}
+          <div className="ah-composer">
+            <label htmlFor="ai-message" className="sr-only">Your message</label>
+            <textarea id="ai-message" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={handleKeyDown}
+              disabled={sending || !conversation} maxLength={8000} rows={1} placeholder="Ask the assistant…" />
+            {sending ? (
+              <button type="button" onClick={() => controller.current?.abort()} className="ah-btn bg-tag-ink text-white hover:opacity-90">Stop</button>
+            ) : (
+              <button type="submit" disabled={!canSend} className="ah-btn-ai-solid">Send</button>
+            )}
+          </div>
+          <p className="mt-2 text-center text-meta text-ink-faint">
+            AI replies can be wrong. Check them before you rely on them.
+          </p>
         </div>
       </form>
-    </div>
+    </>
   )
 }
