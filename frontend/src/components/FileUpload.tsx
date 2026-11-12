@@ -4,6 +4,7 @@ import type { BeginFileOperation } from '../hooks/useAttachments'
 import { api, ApiError } from '../lib/api'
 import AttachmentList from './AttachmentList'
 import NavIcon from './NavIcon'
+import { ATTACHMENT_ACCEPT, validateAttachment } from '../lib/validation'
 
 type Props = {
   onUploaded?: (attachment: Attachment) => void
@@ -17,6 +18,7 @@ type Upload = {
   id: number
   name: string
   status: 'uploading' | 'done' | 'error'
+  progress: number
   attachment?: Attachment
   error?: string
 }
@@ -44,15 +46,23 @@ export default function FileUpload({
   }
 
   async function upload(file: File) {
+    const invalid = validateAttachment(file)
+    if (invalid) {
+      const id = nextId.current++
+      setUploads((previous) => [...previous, { id, name: file.name, status: 'error', progress: 0, error: invalid }])
+      return
+    }
     const finish = beginOperation?.()
     if (beginOperation && !finish) return
     const id = nextId.current++
     pending.current += 1
-    setUploads((previous) => [...previous, { id, name: file.name, status: 'uploading' }])
+    setUploads((previous) => [...previous, { id, name: file.name, status: 'uploading', progress: 0 }])
     const form = new FormData()
     form.append('file', file)
     try {
-      const attachment = await api.postForm<Attachment>('/files', form)
+      const attachment = await api.uploadForm<Attachment>('/files', form, (fraction) => {
+        update(id, { progress: Math.round(fraction * 100) })
+      })
       completed.current.add(attachment.id)
       update(id, { status: 'done', attachment })
       onUploaded?.(attachment)
@@ -109,11 +119,12 @@ export default function FileUpload({
           <span className="text-ink-muted"> or drag them here</span>
         </span>
         <span className="block text-meta text-ink-faint">
-          {count()} / {MAX_ATTACHMENTS} attachments · Files upload immediately
+          {count()} / {MAX_ATTACHMENTS} attachments · Images, PDF, TXT or MD up to 5 MB
         </span>
         <input
           type="file"
           multiple
+          accept={ATTACHMENT_ACCEPT}
           aria-label="Attach files"
           className="sr-only"
           disabled={disabled || atLimit}
@@ -140,8 +151,9 @@ export default function FileUpload({
             </div>
             {upload.status === 'uploading' ? (
               <div className="mt-2 space-y-1">
-                <progress aria-label={`Uploading ${upload.name}`} className="block h-2 w-full accent-accent" />
-                <span className="text-meta text-ink-muted">Uploading…</span>
+                <progress aria-label={`Uploading ${upload.name}`} className="block h-2 w-full accent-accent"
+                  value={upload.progress} max={100} />
+                <span className="text-meta text-ink-muted">Uploading… {upload.progress}%</span>
               </div>
             ) : <p role="alert" className="mt-1 text-danger">{upload.error}</p>}
           </li>

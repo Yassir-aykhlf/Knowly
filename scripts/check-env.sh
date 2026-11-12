@@ -10,7 +10,7 @@ done
 
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "ERROR: missing required environment variables: ${missing[*]}" >&2
-  echo "Copy env.example to .env and fill them in." >&2
+  echo "Copy .env.example to .env and fill them in." >&2
   exit 1
 fi
 echo "Environment looks good."

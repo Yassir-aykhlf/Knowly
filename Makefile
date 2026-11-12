@@ -15,7 +15,7 @@ down:
 	$(COMPOSE) down
 
 .env:
-	cp env.example .env
+	cp .env.example .env
 
 certs/cert.pem:
 	bash scripts/generate-cert.sh

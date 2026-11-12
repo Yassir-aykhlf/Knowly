@@ -14,14 +14,14 @@ class Settings(BaseSettings):
     # Application 
     SECRET_KEY: str
     SESSION_LIFETIME_DAYS: int = 14
-    FRONTEND_ORIGIN: str = "https://localhost"
+    FRONTEND_ORIGIN: str = "https://localhost:8443"
     EDIT_NOTIFICATION_GRACE_SECONDS: int = 300
     FRIEND_REREQUEST_COOLDOWN_HOURS: int = 0
 
     # OAuth
     GOOGLE_OAUTH_CLIENT_ID: str = ""
     GOOGLE_OAUTH_CLIENT_SECRET: str = ""
-    GOOGLE_OAUTH_REDIRECT_URI: str = "https://localhost/api/auth/google/callback"
+    GOOGLE_OAUTH_REDIRECT_URI: str = "https://localhost:8443/api/auth/google/callback"
 
     # LLM + moderation
     LLM_PROVIDER: str = "openai"

@@ -49,7 +49,7 @@ make run
 
 `make run` does everything needed on a fresh clone:
 
-1. copies `env.example` to `.env` if `.env` does not exist yet,
+1. copies `.env.example` to `.env` if `.env` does not exist yet,
 2. generates a self-signed certificate in `certs/` if there is none,
 3. builds and starts the four services (`docker compose up -d --build`).
 
@@ -61,7 +61,7 @@ The certificate is self-signed, so Chrome shows a warning on the first visit; ac
 
 ### Configuration (`.env`)
 
-`.env` is ignored by Git; `env.example` is the committed template. The defaults are enough to run the core application locally. Review these before any real deployment or to enable the optional features:
+`.env` is ignored by Git; `.env.example` is the committed template. The defaults are enough to run the core application locally. Review these before any real deployment or to enable the optional features:
 
 | Variable | Purpose |
 |---|---|
@@ -274,9 +274,9 @@ Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
 - **Why:** screenshots, logs and PDFs are often the fastest way to explain a problem.
 - **How:**
   - *Multiple file types:* PNG, JPEG, WebP, GIF, PDF, plain text, Markdown.
-  - *Validation:* the server ignores the declared type and inspects the actual bytes (magic numbers, image decoding with Pillow, UTF-8 check for text) and enforces the size limit. The browser limits the number of attachments per post (10) and displays the server's validation errors.
+  - *Validation:* the server ignores the declared type and inspects the actual bytes (magic numbers, image decoding with Pillow, UTF-8 check for text) and enforces the size limit. The browser checks type, extension and size (5 MB) before sending anything, limits the number of attachments per post (10), and displays the server's validation errors.
   - *Secure storage and access control:* files are stored under random names outside the web root and served only through the API, which applies the same visibility rules as the post they belong to. Only the uploader can attach or delete them.
-  - *Previews* for images, *progress indicators* during upload, and *deletion*.
+  - *Previews* for images, a per-file *progress bar* with the percentage sent, and *deletion*.
 - **Who:** Ismail El kherrak (API and UI).
 
 ### 7. Standard user management — Major (2)
@@ -321,7 +321,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
 - Designed the database schema and wrote the models and initial migrations.
 - Wrote the global error handlers, the per-task specifications and the backend test suite.
 - Wrote the landing page, the Privacy Policy and the Terms of Service.
-- Added assistant the demo-data seed tool, and the retrieval step of the upcoming RAG feature.
+- Added the demo-data seed tool, and the retrieval step of the upcoming RAG feature.
 
 ### Mohamed El Mouhib
 

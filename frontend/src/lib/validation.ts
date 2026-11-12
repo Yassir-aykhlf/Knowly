@@ -60,3 +60,24 @@ export function validateComment(body: string): string | null {
 	if (length > COMMENT_MAX) return `Must be at most ${COMMENT_MAX.toLocaleString()} characters`
 	return null
 }
+
+export const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024
+export const ATTACHMENT_ACCEPT = '.png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md'
+
+const ATTACHMENT_MIME = new Set([
+	'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+	'application/pdf', 'text/plain', 'text/markdown',
+])
+const ATTACHMENT_EXTENSIONS = new Set(ATTACHMENT_ACCEPT.split(','))
+
+export function validateAttachment(file: { name: string; type: string; size: number }): string | null {
+	if (file.size === 0) return 'File is empty'
+	if (file.size > ATTACHMENT_MAX_BYTES) return 'File is too large (maximum 5 MB)'
+	const dot = file.name.lastIndexOf('.')
+	const extension = dot === -1 ? '' : file.name.slice(dot).toLowerCase()
+	const typeOk = file.type ? ATTACHMENT_MIME.has(file.type) : ATTACHMENT_EXTENSIONS.has(extension)
+	if (!typeOk || !ATTACHMENT_EXTENSIONS.has(extension)) {
+		return 'Unsupported file type. Allowed: PNG, JPEG, WebP, GIF, PDF, TXT, MD'
+	}
+	return null
+}

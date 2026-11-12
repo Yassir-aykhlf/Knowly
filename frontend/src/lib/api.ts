@@ -61,10 +61,49 @@ async function postForm<T>(path: string, formData: FormData): Promise<T> {
   )
 }
 
+function uploadForm<T>(
+  path: string,
+  formData: FormData,
+  onProgress: (fraction: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api${path}`)
+    xhr.withCredentials = true
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total)
+    }
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.onabort = () => reject(new Error('Upload aborted'))
+    xhr.onload = () => {
+      let data: any = null
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null
+      } catch {
+        data = null
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data as T)
+        return
+      }
+      const err = (data && data.error) || {}
+      reject(new ApiError(
+        xhr.status,
+        err.code ?? 'error',
+        err.message ?? (xhr.status === 413 ? 'File is too large' : 'Upload failed'),
+        err.fields,
+      ))
+    }
+    xhr.send(formData)
+  })
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
   postForm: <T>(path: string, formData: FormData) => postForm<T>(path, formData),
+  uploadForm: <T>(path: string, formData: FormData, onProgress: (fraction: number) => void) =>
+    uploadForm<T>(path, formData, onProgress),
 }
