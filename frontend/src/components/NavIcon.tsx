@@ -98,6 +98,7 @@ const ICONS = {
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS
+export const ICON_NAMES = Object.keys(ICONS) as IconName[]
 
 type Props = {
   name: IconName

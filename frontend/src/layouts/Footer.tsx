@@ -8,6 +8,8 @@ export default function Footer() {
         <span aria-hidden="true">·</span>
         <Link to="/terms-of-service" className="hover:text-accent-dark">Terms of Service</Link>
         <span aria-hidden="true">·</span>
+        <Link to="/design-system" className="hover:text-accent-dark">Design System</Link>
+        <span aria-hidden="true">·</span>
         <span>© Knowly</span>
       </nav>
     </footer>

@@ -13,6 +13,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import ForbiddenPage from './pages/ForbiddenPage'
 import NotFoundPage from './pages/NotFoundPage'
+import DesignSystemPage from './pages/DesignSystemPage'
 
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/UsersPage'
@@ -42,6 +43,7 @@ export default function App() {
 				<Route index element={<LandingPage />} />
 				<Route path="privacy-policy" element={<PrivacyPolicyPage />} />
 				<Route path="terms-of-service" element={<TermsOfServicePage />} />
+                <Route path="design-system" element={<DesignSystemPage />} />
 				<Route path="403" element={<ForbiddenPage />} />
 				<Route path="404" element={<NotFoundPage />} />
 				<Route path="*" element={<NotFoundPage />} />

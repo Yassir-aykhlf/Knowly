@@ -208,12 +208,12 @@ async def send_message(
     question = conversation.question
     if question is not None and can_view(question, user):
         prompt += f"\n\nQuestion title: {question.title}\nQuestion body:\n{question.body}"
-+    query = payload.content
-+    if question is not None and can_view(question, user):
-+        query = f"{question.title} {query}"
-+    sources = await rag.retrieve(db, query)
-+    if sources:
-+        prompt += rag.source_prompt(sources)
+    query = payload.content
+    if question is not None and can_view(question, user):
+        query = f"{question.title} {query}"
+    sources = await rag.retrieve(db, query)
+    if sources:
+        prompt += rag.source_prompt(sources)
     messages = [llm.ChatMessage("system", prompt)]
     messages.extend(llm.ChatMessage(message.role, message.content) for message in history)
     sessions = async_sessionmaker(db.bind, expire_on_commit=False)

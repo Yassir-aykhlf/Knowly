@@ -18,6 +18,7 @@ The goal of the project is to build a complete, multi-user web application — f
 - **File attachments** — images, PDFs and text files attached to questions and answers, with validation, previews and access control.
 - **AI assistant** — a chat interface to an LLM with token-by-token streaming, per-user rate limiting, and optional question context. Its replies are grounded in existing forum answers and cite them (RAG).
 - **AI content moderation** — every post is screened automatically; flagged content is held in an admin review queue.
+- **Design system** — color, type and icon tokens plus reusable components, documented on a live page (`/design-system`).
 - **Privacy Policy and Terms of Service** pages, linked from the footer of every page.
 
 ## Instructions
@@ -215,13 +216,14 @@ erDiagram
 | Admin bootstrap | First admin from configuration, plus a CLI command to promote users | iel-kher |
 | File attachments | Upload API and UI, validation, previews, download, delete | iel-kher |
 | Search | Full-text search API and page with filters, sorting, pagination | iel-kher |
+| Design system | Color palette, type scale, icon set and reusable components, with a live reference page at `/design-system` | yaykhlf |
 | Landing page, Privacy Policy, Terms of Service | Public pages and footer links | yaykhlf |
 | Demo data | Repeatable seed tool generating a realistic dataset | yaykhlf |
 | Automated tests | Backend test suite organized per lane and per milestone | yaykhlf |
 
 ## Modules
 
-Major = 2 points, Minor = 1 point. **Total claimed: 16 points.**
+Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 
 | # | Category | Module | Type | Points |
 |---|---|---|---|---|
@@ -236,7 +238,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 16 points.**
 | 9 | Artificial Intelligence | Complete LLM system interface | Major | 2 |
 | 10 | Artificial Intelligence | Content moderation AI | Minor | 1 |
 | 11 | Artificial Intelligence | Complete RAG system | Major | 2 |
-| | | | **Total** | **16** |
+| 12 | Web | Custom-made design system | Minor | 1 |
+| | | | **Total** | **17** |
 
 ### 1. Frameworks for frontend and backend — Major (2)
 
@@ -317,6 +320,17 @@ Major = 2 points, Minor = 1 point. **Total claimed: 16 points.**
   - *Retrieval:* for each message, PostgreSQL full-text search ranks the answers against the user's words (plus the question title when the chat was opened from a question). Ties go to the accepted answer, then to votes. The top three are kept; for long answers only the most relevant excerpt is used.
   - *Generation:* the excerpts are added to the system prompt as numbered sources `[S1]`–`[S3]`, and the LLM is told to cite the ones it uses and to say so when none of them helps.
   - *Answer with sources:* when the reply is complete, the sources it actually cited are appended as links to the original answers, streamed to the browser and saved with the message.
+- **Who:** Yassir.
+
+### 12. Custom-made design system — Minor (1)
+
+- **Why:** with five people writing pages, the interface only stays consistent if everyone builds from the same named colors, sizes and components instead of picking values per page.
+- **How:** no component library is used; everything is built on Tailwind utilities.
+  - *Color palette:* named tokens in `frontend/tailwind.config.js`, grouped by role — ink (text), surfaces and lines, accent (brand and actions), AI (assistant features), and status (warning, danger, online). Components use the token names, not hex values.
+  - *Typography:* three families (Bricolage Grotesque for headings, Inter for text, JetBrains Mono for code and tags) and a named type scale from `2xs` to `display`.
+  - *Icons:* one set of 21 stroke icons on a 24px grid, all rendered through a single `NavIcon` component so size and stroke stay uniform.
+  - *Reusable components (more than 10):* `Avatar`, `Modal`, `Pager`, `BackButton`, `PostMeta`, `ModerationBanner`, `EmptyState`, `ErrorState`, `SkeletonCards`, `SkeletonRows`, `MarkdownBody`, `NavIcon`, `StatusPage` and the toast (`useToast`) in `frontend/src/components/`, plus the class-based components in `frontend/src/index.css`: buttons, form fields, tags, pills, badges, segmented control, alerts.
+  - *Reference page:* `/design-system` (linked from the footer) renders the palette, the type scale, every icon and each component live, using the same code as the application.
 - **Who:** Yassir.
 
 ### Not claimed
