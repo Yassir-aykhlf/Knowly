@@ -18,7 +18,7 @@ from app.models.ai import AiConversation, AiMessage, AiUsageEvent
 from app.models.question import Question
 from app.models.user import User
 from app.schemas.ai import ConversationCreate, ConversationDetail, ConversationOut, MessageCreate, QuestionContext
-from app.services import llm
+from app.services import llm, rag
 from app.services.auth import get_current_user
 from app.services.content import can_view
 
@@ -131,7 +131,7 @@ async def _finish_reply(stream, sessions, conversation_id, user_id, content, com
         await _persist_reply(sessions, conversation_id, user_id, content)
 
 
-async def _stream_reply(request, messages, sessions, conversation_id, user_id):
+async def _stream_reply(request, messages, sources, sessions, conversation_id, user_id):
     parts = []
     stream = None
     completed = False
@@ -145,6 +145,10 @@ async def _stream_reply(request, messages, sessions, conversation_id, user_id):
             yield f"data: {json.dumps({'delta': token})}\n\n"
         else:
             completed = True
+            footer = rag.sources_footer("".join(parts), sources)
+            if footer:
+                parts.append(footer)
+                yield f"data: {json.dumps({'delta': footer})}\n\n"
     except llm.LLMRateLimited:
         error = "The assistant provider is rate-limited. Please try again later."
     except llm.LLMTimeout:
@@ -204,13 +208,19 @@ async def send_message(
     question = conversation.question
     if question is not None and can_view(question, user):
         prompt += f"\n\nQuestion title: {question.title}\nQuestion body:\n{question.body}"
++    query = payload.content
++    if question is not None and can_view(question, user):
++        query = f"{question.title} {query}"
++    sources = await rag.retrieve(db, query)
++    if sources:
++        prompt += rag.source_prompt(sources)
     messages = [llm.ChatMessage("system", prompt)]
     messages.extend(llm.ChatMessage(message.role, message.content) for message in history)
     sessions = async_sessionmaker(db.bind, expire_on_commit=False)
     conversation_id, user_id = conversation.id, user.id
     await db.commit()
     return StreamingResponse(
-        _stream_reply(request, messages, sessions, conversation_id, user_id),
+        _stream_reply(request, messages, sources, sessions, conversation_id, user_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

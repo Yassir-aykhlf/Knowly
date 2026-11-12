@@ -16,7 +16,7 @@ The goal of the project is to build a complete, multi-user web application — f
 - **Notifications** — an inbox and unread badge covering content creation, edits, deletions, votes, mentions, friend events and moderation decisions.
 - **Search** — full-text search over questions with filters (tag, author, status, date range), sorting and pagination.
 - **File attachments** — images, PDFs and text files attached to questions and answers, with validation, previews and access control.
-- **AI assistant** — a chat interface to an LLM with token-by-token streaming, per-user rate limiting, and optional question context.
+- **AI assistant** — a chat interface to an LLM with token-by-token streaming, per-user rate limiting, and optional question context. Its replies are grounded in existing forum answers and cite them (RAG).
 - **AI content moderation** — every post is screened automatically; flagged content is held in an admin review queue.
 - **Privacy Policy and Terms of Service** pages, linked from the footer of every page.
 
@@ -210,6 +210,7 @@ erDiagram
 | User search | Search bar to find other users | fkoukou |
 | LLM client and AI assistant | Streaming chat with an LLM, conversation history, error handling | iel-kher |
 | Assistant rate limiting | Per-user hourly limit, stored in the database | yaykhlf |
+| Retrieval-augmented answers (RAG) | The assistant searches existing forum answers for each message, gives the best ones to the LLM, and lists the cited sources under the reply | yaykhlf |
 | Content moderation | Automatic screening of every post, admin review queue with approve / reject | iel-kher |
 | Admin bootstrap | First admin from configuration, plus a CLI command to promote users | iel-kher |
 | File attachments | Upload API and UI, validation, previews, download, delete | iel-kher |
@@ -220,7 +221,7 @@ erDiagram
 
 ## Modules
 
-Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
+Major = 2 points, Minor = 1 point. **Total claimed: 16 points.**
 
 | # | Category | Module | Type | Points |
 |---|---|---|---|---|
@@ -234,7 +235,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
 | 8 | User Management | Remote authentication with OAuth 2.0 | Minor | 1 |
 | 9 | Artificial Intelligence | Complete LLM system interface | Major | 2 |
 | 10 | Artificial Intelligence | Content moderation AI | Minor | 1 |
-| | | | **Total** | **14** |
+| 11 | Artificial Intelligence | Complete RAG system | Major | 2 |
+| | | | **Total** | **16** |
 
 ### 1. Frameworks for frontend and backend — Major (2)
 
@@ -307,9 +309,18 @@ Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
 - **How:** every question, answer and comment — on creation and on edit — is scored by a moderation model. If a category score exceeds its configurable threshold, the post is set to *pending*, hidden from everyone except its author and admins, and the author is notified with the reason (**auto-moderation and auto-warning**). Admins review held posts in a moderation queue and approve or reject them; the author is notified of the decision. Verdicts are cached by content hash. If the moderation provider is unreachable, posts are published rather than blocked.
 - **Who:** Ismail El kherrak.
 
+### 11. RAG system — Major (2)
+
+- **Why:** the forum already holds answers written and voted on by students. An assistant that ignores them repeats work and can contradict the community; one that reads them first gives answers users can verify.
+- **How** (`backend/app/services/rag.py`):
+  - *Dataset:* every approved, human-written answer on the forum, together with its question title and tags. It grows as the community posts. Pending, rejected and AI-assisted answers are excluded.
+  - *Retrieval:* for each message, PostgreSQL full-text search ranks the answers against the user's words (plus the question title when the chat was opened from a question). Ties go to the accepted answer, then to votes. The top three are kept; for long answers only the most relevant excerpt is used.
+  - *Generation:* the excerpts are added to the system prompt as numbered sources `[S1]`–`[S3]`, and the LLM is told to cite the ones it uses and to say so when none of them helps.
+  - *Answer with sources:* when the reply is complete, the sources it actually cited are appended as links to the original answers, streamed to the browser and saved with the message.
+- **Who:** Yassir.
+
 ### Not claimed
 
-- **RAG (AI, Major)** — in progress. The retrieval step exists (`backend/app/services/rag.py`) but is not yet connected to the assistant, so no points are claimed for it.
 - **Real-time features (Web, Major)** — not claimed; the application uses polling, not WebSockets.
 - **GDPR compliance (Data, Minor)** — not claimed; account deletion with anonymization is implemented, but data export and confirmation emails are not.
 
@@ -321,7 +332,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 14 points.**
 - Designed the database schema and wrote the models and initial migrations.
 - Wrote the global error handlers, the per-task specifications and the backend test suite.
 - Wrote the landing page, the Privacy Policy and the Terms of Service.
-- Added the demo-data seed tool, and the retrieval step of the upcoming RAG feature.
+- Added the demo-data seed tool, and the RAG feature of the assistant.
 
 ### Mohamed El Mouhib
 
