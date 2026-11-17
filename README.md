@@ -245,7 +245,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 
 - **Why:** a project of this size needs structure, routing and validation out of the box on both sides.
 - **How:** React 18 (with React Router) for the frontend; FastAPI for the backend, organized in routers, services, schemas and models.
-- **Who:** Yassir (scaffolding).
+- **Who:** Yassir (scaffolding), Mohamed (questions API and main UI).
 
 ### 2. User interaction — Major (2)
 
@@ -404,6 +404,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 - [MDN — Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
 - [OpenAI API reference](https://platform.openai.com/docs/api-reference)
 - [Conventional Commits](https://www.conventionalcommits.org/)
+- [Keyword search is all you need: Achieving RAG-Level Performance without vector databases using agentic tool use](https://arxiv.org/pdf/2602.23368)
 
 ### Use of AI
 
