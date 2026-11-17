@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
 from app.db.session import AsyncSessionLocal
+from app.services import realtime
 from app.services.session import get_optional_session
 
 router = APIRouter(tags=["realtime"])
@@ -14,8 +14,12 @@ async def websocket_endpoint(websocket: WebSocket):
         return
     user_id = session.user_id
     await websocket.accept()
+    realtime.connect(user_id, websocket)
+    await realtime.send_to_user(user_id, {"type": "hello"})
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         pass
+    finally:
+        realtime.disconnect(user_id, websocket)
