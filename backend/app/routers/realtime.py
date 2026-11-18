@@ -15,7 +15,6 @@ async def websocket_endpoint(websocket: WebSocket):
     user_id = session.user_id
     await websocket.accept()
     realtime.connect(user_id, websocket)
-    await realtime.send_to_user(user_id, {"type": "hello"})
     try:
         while True:
             await websocket.receive_text()
