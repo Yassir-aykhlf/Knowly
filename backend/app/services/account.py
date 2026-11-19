@@ -1,7 +1,5 @@
-import uuid
-
 from fastapi import HTTPException
-from sqlalchemy import delete, func, or_, update
+from sqlalchemy import delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ai import AiConversation
@@ -13,6 +11,51 @@ from app.models.user import User
 from app.schemas.auth import AccountDeleteIn
 from app.services.avatar import safe_remove_avatar
 from app.services.security import verify_password
+from app.services.admin import is_initial_admin
+
+
+async def lock_admin_management(db: AsyncSession) -> None:
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(827361)")
+    )
+
+
+async def ensure_admin_removable(
+    db: AsyncSession,
+    user: User,
+) -> None:
+    if user.role != "admin":
+        return
+
+    if is_initial_admin(user.email):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "conflict",
+                "message": "The configured initial admin is protected",
+            },
+        )
+
+    stmt = (
+        select(func.count())
+        .select_from(User)
+        .where(
+            User.role == "admin",
+            User.is_anonymized.is_(False),
+            User.id != user.id,
+        )
+    )
+
+    remaining_admins = await db.scalar(stmt)
+
+    if not remaining_admins:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "conflict",
+                "message": "Cannot remove the last administrator",
+            },
+        )
 
 
 def validate_deletion(
@@ -56,8 +99,29 @@ async def delete_account(
     user: User,
     data: AccountDeleteIn,
 ) -> None:
+    await lock_admin_management(db)
+    await db.refresh(user)
+
+    if user.is_anonymized:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "conflict",
+                "message": "Account is already deleted",
+            },
+        )
+
     validate_deletion(user, data)
 
+    await ensure_admin_removable(db, user)
+
+    await anonymize_account(db, user)
+
+
+async def anonymize_account(
+    db: AsyncSession,
+    user: User,
+) -> None:
     user_id = user.id
     old_avatar_path = user.avatar_path
 
@@ -101,7 +165,6 @@ async def delete_account(
             )
         )
 
-
         await db.execute(
             delete(Friendship).where(
                 or_(
@@ -111,8 +174,9 @@ async def delete_account(
             )
         )
 
-      
-        deleted_username = f"[deleted_{uuid.uuid4().hex[:16]}]"
+        deleted_username = (
+            f"[deleted_{uuid.uuid4().hex[:16]}]"
+        )
 
         await db.execute(
             update(User)
@@ -125,6 +189,7 @@ async def delete_account(
                 avatar_path=None,
                 oauth_provider=None,
                 oauth_subject=None,
+                role="user",
                 is_anonymized=True,
             )
         )
