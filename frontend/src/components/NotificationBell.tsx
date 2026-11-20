@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { useRealtime } from '../hooks/useRealtime'
 import { usePolling } from '../hooks/usePolling'
 import { api } from '../lib/api'
 import { NavLink } from 'react-router-dom'
@@ -23,7 +24,7 @@ export default function NotificationBell() {
 	useEffect(() => {
 		void fetchUnreadCount()
 	}, [fetchUnreadCount])
-
+    useRealtime('notification', fetchUnreadCount)
 	usePolling(fetchUnreadCount, 30000)
 
 	useEffect(() => {

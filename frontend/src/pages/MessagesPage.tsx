@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar'
 import NavIcon from '../components/NavIcon'
 import { EmptyState, ErrorState, SkeletonRows } from '../components/StateBlocks'
 import { usePolling } from '../hooks/usePolling'
+import { useRealtime } from '../hooks/useRealtime'
 import { api, ApiError } from '../lib/api'
 import { relativeTime } from '../lib/format'
 import type { Conversation, Friend } from '../lib/types'
@@ -51,6 +52,7 @@ export default function MessagesPage() {
     void fetchPresence()
   }, [fetchConversations, fetchPresence])
 
+  useRealtime('message', () => void fetchConversations())
   usePolling(() => {
     void fetchConversations()
     void fetchPresence()

@@ -7,6 +7,7 @@ import type { MessagesOutletContext } from './MessagesPage'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { usePolling } from '../hooks/usePolling'
+import { useRealtime } from '../hooks/useRealtime'
 import { api, ApiError } from '../lib/api'
 import type { Message, Paginated, Author, UserProfile } from '../lib/types'
 
@@ -109,9 +110,7 @@ export default function ConversationPage() {
           })
         }
       })
-      .catch(() => {
-        // Fine — we can render without a name if this fails.
-      })
+      .catch(() => {})
     return () => {
       active = false
     }
@@ -127,7 +126,8 @@ export default function ConversationPage() {
     void fetchLatest()
   }, [userId])
 
-  usePolling(() => void fetchLatest(), 5000)
+  useRealtime('message', () => void fetchLatest())
+  usePolling(() => void fetchLatest(), 30000)
 
   function handleScroll() {
     const el = scrollRef.current
