@@ -29,8 +29,10 @@ async def get_optional_user(
     if session is None:
         return None
 
-    stmt = select(User).where(User.id == session.user_id)
-
+    stmt = select(User).where(
+        User.id == session.user_id,
+        User.is_anonymized.is_(False),
+    )
     result = await db.execute(stmt)
 
     return result.scalar_one_or_none()
