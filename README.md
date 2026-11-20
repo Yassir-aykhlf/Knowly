@@ -19,6 +19,7 @@ The goal of the project is to build a complete, multi-user web application — f
 - **File attachments** — images, PDFs and text files attached to questions and answers, with validation, previews and access control.
 - **AI assistant** — a chat interface to an LLM with token-by-token streaming, per-user rate limiting, and optional question context. Its replies are grounded in existing forum answers and cite them (RAG).
 - **AI content moderation** — every post is screened automatically; flagged content is held in an admin review queue.
+- **User administration (API)** — admins can list, search and filter users, edit a user's username and bio, promote or demote them, and delete their account (`/api/admin/users`).
 - **Design system** — color, type and icon tokens plus reusable components, documented on a live page (`/design-system`).
 - **Privacy Policy and Terms of Service** pages, linked from the footer of every page.
 
@@ -216,6 +217,7 @@ erDiagram
 | Retrieval-augmented answers (RAG) | The assistant searches existing forum answers for each message, gives the best ones to the LLM, and lists the cited sources under the reply | yaykhlf |
 | Content moderation | Automatic screening of every post, admin review queue with approve / reject | iel-kher |
 | Admin bootstrap | First admin from configuration, plus a CLI command to promote users | iel-kher |
+| Admin user management (API) | List users with search, role filter and pagination; view, edit (username, bio), promote / demote, and delete with anonymization. Admins cannot change their own role or delete themselves from the admin endpoints; the configured initial admin and the last remaining admin cannot be demoted or deleted; a role change logs the target out everywhere. Admin changes and account deletions are serialized with a database lock. | gstitou |
 | File attachments | Upload API and UI, validation, previews, download, delete | iel-kher |
 | Search | Full-text search API and page with filters, sorting, pagination | iel-kher |
 | Design system | Color palette, type scale, icon set and reusable components, with a live reference page at `/design-system` | yaykhlf |
@@ -225,7 +227,7 @@ erDiagram
 
 ## Modules
 
-Major = 2 points, Minor = 1 point. **Total claimed: 19 points.**
+Major = 2 points, Minor = 1 point. **Total claimed: 21 points.**
 
 | # | Category | Module | Type | Points |
 |---|---|---|---|---|
@@ -242,7 +244,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 19 points.**
 | 11 | Artificial Intelligence | Complete RAG system | Major | 2 |
 | 12 | Web | Custom-made design system | Minor | 1 |
 | 13 | Web | Real-time features using WebSockets | Major | 2 |
-| | | | **Total** | **19** |
+| 14 | User Management | Advanced permissions system | Major | 2 |
+| | | | **Total** | **21** |
 
 ### 1. Frameworks for frontend and backend — Major (2)
 
@@ -347,6 +350,18 @@ Major = 2 points, Minor = 1 point. **Total claimed: 19 points.**
   - Code: `backend/app/services/realtime.py`, `backend/app/routers/realtime.py`, `frontend/src/lib/realtime.ts`, `frontend/src/hooks/useRealtime.ts`.
 - **Who:** Yassir.
 
+### 14. Advanced permissions system — Major (2)
+
+- **Why:** a community platform needs people who can step in — review flagged posts, fix an abusive username, remove an account — without giving those powers to everyone.
+- **How:**
+  - *Roles:* three levels. **Guests** (not logged in) see only approved content and cannot act. **Users** post, vote, message and see their own pending or rejected posts. **Admins** see all content whatever its moderation status, every attachment, the moderation queue and the user-management API. Roles are stored on the user (`user` | `admin`) and checked on the server by a single `require_admin` dependency and a single visibility rule (`backend/app/services/content.py`).
+  - *View, edit and delete users (CRUD):* `GET /api/admin/users` lists users with search on username and email, a role filter and pagination; `GET /api/admin/users/{id}` shows one account; `PATCH /api/admin/users/{id}` edits username and bio with the same validation as the profile form; `DELETE /api/admin/users/{id}` deletes the account with the same anonymization as self-deletion, keeping the forum content it wrote.
+  - *Roles management:* `PATCH /api/admin/users/{id}/role` promotes or demotes. The first admin comes from `INITIAL_ADMIN_EMAIL`, and the `promote-admin` command promotes others from the command line. A role change logs the target out of every session so the new role applies at once.
+  - *Safeguards:* admins cannot change their own role or delete themselves from the admin endpoints; the configured initial admin and the last remaining admin cannot be demoted or deleted; deleted accounts can no longer authenticate. Admin changes and account deletions take a PostgreSQL advisory lock so two concurrent requests cannot both remove the last admin.
+  - *Different views and actions based on role:* the sidebar shows the Moderation entry only to admins, the moderation page sends other users to a 403 page, and posts held by moderation are shown to admins and to their author only, with a moderation banner.
+  - Code: `backend/app/routers/admin_users.py`, `backend/app/services/admin_users.py`, `backend/app/services/account.py`, `backend/app/services/auth.py`.
+- **Who:** Ghita (user-management API), Ismail El kherrak (admin bootstrap, moderation queue and page), Yassir (visibility rules).
+
 ### Not claimed
 
 - **GDPR compliance (Data, Minor)** — not claimed; account deletion with anonymization is implemented, but data export and confirmation emails are not.
@@ -377,6 +392,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 19 points.**
 - Implemented account deletion with anonymization.
 - Implemented Google OAuth sign-in and account linking.
 - Built the login, register, profile and settings pages.
+- Implemented the admin user-management API (list, view, edit, role change, delete), sharing the anonymization logic with self-deletion, and blocked deleted accounts from authenticating.
 
 ### Fatima Ezzahrae Koukou
 
