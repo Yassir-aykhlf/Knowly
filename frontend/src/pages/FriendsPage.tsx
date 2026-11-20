@@ -1,8 +1,8 @@
-
 import { useCallback, useEffect, useState } from 'react'
 
 import FriendsList from '../components/FriendsList'
 import { usePolling } from '../hooks/usePolling'
+import { useRealtime } from '../hooks/useRealtime'
 import { api, ApiError } from '../lib/api'
 import type { Friend, PendingRequest } from '../lib/types'
 
@@ -37,6 +37,10 @@ export default function FriendsPage() {
     void fetchPending()
   }, [fetchFriends, fetchPending])
 
+  useRealtime('notification', () => {
+    void fetchFriends()
+    void fetchPending()
+  })
 
   usePolling(() => {
     void fetchFriends()
