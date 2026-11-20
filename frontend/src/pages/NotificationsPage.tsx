@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import Pager from '../components/Pager'
 import { EmptyState, ErrorState, SkeletonRows } from '../components/StateBlocks'
+import { useRealtime } from '../hooks/useRealtime'
 import { api, ApiError } from '../lib/api'
 import { relativeTime } from '../lib/format'
 import { describeNotification } from '../lib/notifications'
@@ -35,6 +36,12 @@ export default function NotificationsPage() {
   }, [])
 
   useEffect(() => { void load(page) }, [page, load])
+
+  useRealtime('notification', async () => {
+    try {
+      setData(await api.get<Paginated<AppNotification>>(`/notifications?page=${page}&limit=${LIMIT}`))
+    } catch {}
+  })
 
   async function handleRowClick(n: AppNotification) {
     setData((prev) =>

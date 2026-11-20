@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
+import { useRealtime } from './useRealtime'
 import { api } from '../lib/api'
 import type { Conversation, PendingRequest, UnreadCount } from '../lib/types'
 import { usePolling } from './usePolling'
@@ -11,8 +12,6 @@ export type NavCounts = {
   messages: number
 }
 
-// Badge counts for the sidebar. Refreshed on a 30s poll and on every
-// navigation, so reading a thread or the inbox clears its badge promptly.
 export function useNavCounts(): NavCounts {
   const { pathname } = useLocation()
   const [counts, setCounts] = useState<NavCounts>({ notifications: 0, friends: 0, messages: 0 })
@@ -37,6 +36,8 @@ export function useNavCounts(): NavCounts {
     void refresh()
   }, [refresh, pathname])
 
+  useRealtime('message', refresh)
+  useRealtime('notification', refresh)
   usePolling(refresh, 30000)
 
   return counts

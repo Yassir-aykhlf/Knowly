@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services import realtime
 from app.models.message import Message
 from app.models.user import User
 from app.schemas.message import ConversationOut
@@ -33,6 +34,8 @@ async def send_message(
     db.add(message)
     await db.commit()
     await db.refresh(message)
+    await realtime.send_to_user(receiver_id, {"type": "message", "with": str(sender_id)})
+    await realtime.send_to_user(sender_id, {"type": "message", "with": str(receiver_id)})
     return message
 
 

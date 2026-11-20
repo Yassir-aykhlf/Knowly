@@ -16,6 +16,7 @@ from app.routers import files
 from app.routers import ai, moderation, search
 from app.routers import admin_users
 
+from app.routers import realtime
 
 logger = logging.getLogger("knowly")
 
@@ -120,3 +121,4 @@ app.include_router(ai.router, prefix="/api")
 app.include_router(moderation.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(admin_users.router, prefix="/api")
+app.include_router(realtime.router, prefix="/api")

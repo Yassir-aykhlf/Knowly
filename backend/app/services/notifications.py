@@ -10,6 +10,7 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.models.vote import Vote
 from app.services.mentions import extract_mentions
+from app.services import realtime
 
 IDEMPOTENT_EVENTS = frozenset({"answer_created", "comment_created", "mentioned"})
 
@@ -27,6 +28,7 @@ async def create_notification(
 ) -> None:
     if actor_id is not None and actor_id == recipient_id:
         return
+    realtime.send_after_commit(db, recipient_id, {"type": "notification"})
     if coalesce_key is not None:
         stmt = pg_insert(Notification).values(
             recipient_id=recipient_id, actor_id=actor_id, event_type=event_type,
