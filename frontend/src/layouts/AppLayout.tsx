@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-
+import { connectRealtime, disconnectRealtime } from '../lib/realtime'
 import Avatar from '../components/Avatar'
 import NavIcon, { type IconName } from '../components/NavIcon'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,7 +15,6 @@ type NavItem = {
   icon: IconName
   badge?: keyof NavCounts
   adminOnly?: boolean
-  // Extra path prefixes that should light this item up.
   also?: string[]
 }
 
@@ -150,7 +149,12 @@ export default function AppLayout() {
   const { pathname } = useLocation()
   const counts = useNavCounts()
   useHeartbeat()
-
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId) return
+    connectRealtime()
+    return disconnectRealtime
+  }, [userId])
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const drawerRef = useRef<HTMLDialogElement>(null)
@@ -162,7 +166,6 @@ export default function AppLayout() {
       try {
         window.localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
       } catch {
-        // Storage can be unavailable (private mode); the toggle still works.
       }
       return next
     })
@@ -173,7 +176,6 @@ export default function AppLayout() {
     navigate('/login')
   }
 
-  // A new page starts at the top and closes the mobile drawer.
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0)
     setDrawerOpen(false)
@@ -186,7 +188,6 @@ export default function AppLayout() {
     if (!drawerOpen && dialog.open) dialog.close()
   }, [drawerOpen])
 
-  // The drawer is mobile-only: close it if the viewport grows past the breakpoint.
   useEffect(() => {
     const query = window.matchMedia('(min-width: 1024px)')
     const onChange = () => {
@@ -211,7 +212,6 @@ export default function AppLayout() {
         Skip to content
       </a>
 
-      {/* Mobile header */}
       <header className="flex items-center gap-1 bg-sidebar px-1.5 lg:hidden">
         <button
           type="button"
@@ -239,7 +239,6 @@ export default function AppLayout() {
         )}
       </header>
 
-      {/* Mobile drawer */}
       <dialog
         ref={drawerRef}
         aria-label="Menu"
@@ -260,10 +259,8 @@ export default function AppLayout() {
         </div>
       </dialog>
 
-      {/* Desktop sidebar */}
       <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-2 bg-sidebar px-3 py-4 lg:grid">
         <div className={`flex h-9 items-center ${collapsed ? 'justify-center' : 'justify-between pl-1.5'}`}>
-          {/* Collapsed: the toggle takes the brand's place. */}
           {!collapsed && <Brand />}
           <button
             type="button"

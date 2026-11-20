@@ -18,7 +18,7 @@ _tasks = set()
 def _send_pending(session: Session) -> None:
     for user_id, message in session.info.pop("realtime", []):
         task = asyncio.get_running_loop().create_task(send_to_user(user_id, message))
-        _task.add(task)
+        _tasks.add(task)
         task.add_done_callback(_tasks.discard)
 
 @event.listens_for(Session, "after_rollback")
