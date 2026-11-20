@@ -14,9 +14,10 @@ let wanted = false;
 let droppedBefore = false;
 
 function runAll() {
-    for (const listener of group) listener();
-  for (const group of Object.values(listeners)) {
-  }
+    for (const group of Object.values(listeners)) {
+        for (const listener of group)
+            listener();
+    }
 }
 
 function open() {
