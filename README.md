@@ -13,6 +13,7 @@ The goal of the project is to build a complete, multi-user web application — f
 - **Q&A forum** — questions with Markdown bodies and tags, answers, comments, up/down votes, accepted answers, view counts, `@mentions`.
 - **Accounts** — email + password sign-up and login, Google OAuth sign-in and account linking, profile editing, avatar upload, account deletion with anonymization.
 - **Social** — friend requests, friends list with online status, one-to-one private messaging, user directory and user search.
+- **Real time** — new private messages, notifications and sidebar badges appear instantly over a WebSocket, which reconnects by itself after a drop.
 - **Notifications** — an inbox and unread badge covering content creation, edits, deletions, votes, mentions, friend events and moderation decisions.
 - **Search** — full-text search over questions with filters (tag, author, status, date range), sorting and pagination.
 - **File attachments** — images, PDFs and text files attached to questions and answers, with validation, previews and access control.
@@ -131,7 +132,7 @@ Interactive API documentation (OpenAPI) is served at `https://localhost:8443/api
 ### Infrastructure
 
 - **Docker Compose** with four services: `db` (PostgreSQL), `backend` (FastAPI), `frontend` (builds the static bundle), `nginx`
-- **Nginx** terminates TLS, serves the frontend bundle and avatars, and reverse-proxies `/api/` to the backend. Only Nginx is published on the host; the backend and database are reachable only on the internal Docker network.
+- **Nginx** terminates TLS, serves the frontend bundle and avatars, and reverse-proxies `/api/` to the backend, including the WebSocket upgrade on `/api/ws`. Only Nginx is published on the host; the backend and database are reachable only on the internal Docker network.
 
 ### Justification of the main choices
 
@@ -140,7 +141,7 @@ Interactive API documentation (OpenAPI) is served at `https://localhost:8443/api
 - **React + TypeScript** — component model for a UI with many repeated elements (question cards, vote arrows, avatars); types shared across pages catch API-shape mistakes at build time.
 - **Tailwind CSS** — consistent design tokens without maintaining separate stylesheets; responsive variants make mobile layouts straightforward.
 - **Server-side sessions instead of JWT** — the browser holds an opaque random token in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie; the database stores only its SHA-256 hash. Sessions can be revoked instantly (logout, password change, account deletion) and JavaScript never sees the token.
-- **Polling instead of WebSockets** — messages, notifications and online status are refreshed by periodic requests that pause while the tab is hidden.
+- **WebSockets as a signal, REST for the data** — the server pushes a tiny "something changed" event and the browser reloads what is on screen through the normal API. Data keeps a single loading path with its existing permission checks, and a lost event is harmless because a reload is always correct. A slow 30-second poll stays as a safety net and still drives online status.
 
 ## Database Schema
 
@@ -208,6 +209,7 @@ erDiagram
 | Notifications | Inbox page, unread badge, mark one / mark all as read, merging of similar events | fkoukou |
 | Friends | Send, accept, reject, remove; friends list and pending requests | fkoukou |
 | Private messages | Conversation list, one-to-one chat, unread tracking | fkoukou |
+| Real-time updates | WebSocket connection pushing new messages and notifications to every open tab; reconnects and catches up after a drop | yaykhlf |
 | User search | Search bar to find other users | fkoukou |
 | LLM client and AI assistant | Streaming chat with an LLM, conversation history, error handling | iel-kher |
 | Assistant rate limiting | Per-user hourly limit, stored in the database | yaykhlf |
@@ -223,7 +225,7 @@ erDiagram
 
 ## Modules
 
-Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
+Major = 2 points, Minor = 1 point. **Total claimed: 19 points.**
 
 | # | Category | Module | Type | Points |
 |---|---|---|---|---|
@@ -239,7 +241,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 | 10 | Artificial Intelligence | Content moderation AI | Minor | 1 |
 | 11 | Artificial Intelligence | Complete RAG system | Major | 2 |
 | 12 | Web | Custom-made design system | Minor | 1 |
-| | | | **Total** | **17** |
+| 13 | Web | Real-time features using WebSockets | Major | 2 |
+| | | | **Total** | **19** |
 
 ### 1. Frameworks for frontend and backend — Major (2)
 
@@ -251,7 +254,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 
 - **Why:** a Q&A community only works if members can find and talk to each other, not just to posts.
 - **How:**
-  - *Chat* — one-to-one private messages (`/api/messages`), conversation list with unread counts, a conversation page that fetches new messages every few seconds.
+  - *Chat* — one-to-one private messages (`/api/messages`), conversation list with unread counts, a conversation page where new messages appear instantly.
   - *Profiles* — a public profile page for every user with their information, questions and answers.
   - *Friends* — send, accept, reject and remove; friends list with online status; pending requests. A database index guarantees a single friendship record per pair of users.
 - **Who:** Fatima Ezzahrae (chat, friends), Ghita (profiles).
@@ -265,7 +268,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 ### 4. Notification system — Minor (1)
 
 - **Why:** users need to know when something happens to their content without checking every page.
-- **How:** notifications are created in the same database transaction as the action that causes them, for creation (new answer, new comment, mention, friend request), update (content edited, vote cast, friend request accepted, moderation approved / rejected / pending) and deletion (content deleted, friend removed). The frontend shows an unread badge that refreshes periodically and an inbox page with mark-as-read and mark-all-as-read. Similar unread events are merged into a single notification with a counter.
+- **How:** notifications are created in the same database transaction as the action that causes them, for creation (new answer, new comment, mention, friend request), update (content edited, vote cast, friend request accepted, moderation approved / rejected / pending) and deletion (content deleted, friend removed). The frontend shows an unread badge and an inbox page that update in real time, with mark-as-read and mark-all-as-read. Similar unread events are merged into a single notification with a counter.
 - **Who:** Fatima Ezzahrae (inbox API and UI, friend events), Ismail El kherrak (moderation events).
 
 ### 5. Advanced search — Minor (1)
@@ -333,9 +336,19 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
   - *Reference page:* `/design-system` (linked from the footer) renders the palette, the type scale, every icon and each component live, using the same code as the application.
 - **Who:** Yassir.
 
+### 13. Real-time features using WebSockets — Major (2)
+
+- **Why:** a chat that updates every few seconds does not feel like a chat, and a notification that arrives half a minute late is easy to miss.
+- **How:**
+  - *Connection:* after login, each browser tab opens one WebSocket to `/api/ws`. It is authenticated by the same session cookie as the REST API; without a valid session the handshake is refused. Nginx forwards the upgrade and keeps a quiet connection open for up to an hour.
+  - *Real-time updates across clients:* when a private message is sent, the receiver's tabs and the sender's other tabs are told at once. When a notification is created (answer, comment, vote, mention, friend request, moderation decision), its recipient is told as soon as the database transaction commits, and never if it rolls back. The open conversation, the conversation list, the notification inbox, the friends page and the sidebar badges all reload on these events.
+  - *Connection and disconnection:* the server forgets a socket when its tab closes or a send to it fails. After a drop, the browser retries every 3 seconds and, once reconnected, reloads everything once to catch up on the events it missed. Logging out closes the socket and stops the retries.
+  - *Efficient broadcasting:* the server keeps a map from each user to their open sockets and sends each event only to the users concerned, never to everyone. Events are a few bytes (`{"type": "notification"}`); the data itself is fetched through the existing API.
+  - Code: `backend/app/services/realtime.py`, `backend/app/routers/realtime.py`, `frontend/src/lib/realtime.ts`, `frontend/src/hooks/useRealtime.ts`.
+- **Who:** Yassir.
+
 ### Not claimed
 
-- **Real-time features (Web, Major)** — not claimed; the application uses polling, not WebSockets.
 - **GDPR compliance (Data, Minor)** — not claimed; account deletion with anonymization is implemented, but data export and confirmation emails are not.
 
 ## Individual Contributions
@@ -347,6 +360,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 - Wrote the global error handlers, the per-task specifications and the backend test suite.
 - Wrote the landing page, the Privacy Policy and the Terms of Service.
 - Added the demo-data seed tool, and the RAG feature of the assistant.
+- Added real-time updates over WebSockets: server push, a shared browser connection with reconnection, and live pages.
 
 ### Mohamed El Mouhib
 
@@ -381,7 +395,7 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 
 ## Known Limitations
 
-- Messages, notifications and online status are refreshed by polling, so updates appear after a short delay (about 5 seconds in an open conversation, up to 30 seconds elsewhere).
+- Real-time connections are kept in the memory of the single backend process; running several backend processes would need a shared broker such as Redis.
 - The TLS certificate is self-signed; browsers warn on first visit.
 - The AI assistant and AI moderation require an OpenAI API key. OpenAI is the only provider implemented.
 - Google sign-in requires OAuth credentials from the Google Cloud console.
@@ -402,6 +416,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 17 points.**
 - [OAuth 2.0 for Web Server Applications (Google)](https://developers.google.com/identity/protocols/oauth2/web-server)
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) and [Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [MDN — Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
+- [MDN — The WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) and [FastAPI — WebSockets](https://fastapi.tiangolo.com/advanced/websockets/)
+- [Nginx — WebSocket proxying](https://nginx.org/en/docs/http/websocket.html)
 - [OpenAI API reference](https://platform.openai.com/docs/api-reference)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Keyword search is all you need: Achieving RAG-Level Performance without vector databases using agentic tool use](https://arxiv.org/pdf/2602.23368)
