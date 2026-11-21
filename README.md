@@ -227,7 +227,7 @@ erDiagram
 
 ## Modules
 
-Major = 2 points, Minor = 1 point. **Total claimed: 21 points.**
+Major = 2 points, Minor = 1 point. **Total claimed: 22 points.**
 
 | # | Category | Module | Type | Points |
 |---|---|---|---|---|
@@ -245,7 +245,8 @@ Major = 2 points, Minor = 1 point. **Total claimed: 21 points.**
 | 12 | Web | Custom-made design system | Minor | 1 |
 | 13 | Web | Real-time features using WebSockets | Major | 2 |
 | 14 | User Management | Advanced permissions system | Major | 2 |
-| | | | **Total** | **21** |
+| 15 | Accessibility and Internationalization | Support for additional browsers | Minor | 1 |
+| | | | **Total** | **22** |
 
 ### 1. Frameworks for frontend and backend — Major (2)
 
