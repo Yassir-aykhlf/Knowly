@@ -49,6 +49,12 @@ const NAV_GROUPS: NavItem[][] = [
       icon: "moderation",
       adminOnly: true,
     },
+    {
+      to: "/admin/users",
+      label: "Manage users",
+      icon: "admin",
+      adminOnly: true,
+    },
     { to: "/settings", label: "Settings", icon: "settings" },
   ],
 ];

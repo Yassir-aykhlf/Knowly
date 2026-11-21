@@ -29,6 +29,7 @@ import AiConversationPage from './pages/AiConversationPage'
 import SearchPage from './pages/SearchPage'
 import NotificationsPage from './pages/NotificationsPage'
 import ModerationPage from './pages/ModerationPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 
 export default function App() {
 	return (
@@ -71,6 +72,7 @@ export default function App() {
 					<Route path="search" element={<SearchPage />} />
 					<Route path="notifications" element={<NotificationsPage />} />
 					<Route path="admin/moderation" element={<ModerationPage />} />
+					<Route path="admin/users" element={<AdminUsersPage />} />
 				</Route>
 			</Route>
 		</Routes>
